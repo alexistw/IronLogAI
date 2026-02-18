@@ -22,18 +22,29 @@ export default function App() {
     setExercises(getExercises());
   }, []);
 
-  const handleAddExercise = (name: string, sets: number, reps: number, weight: number) => {
-    const newExercise: Exercise = {
-      id: generateId(),
-      name,
-      sets,
-      reps,
-      weight,
+  const handleAddExercise = (newExercisesData: { name: string, sets: number, reps: number, weight: number }[]) => {
+    const timestamp = Date.now();
+    const newExercises: Exercise[] = newExercisesData.map((data, index) => ({
+      id: generateId() + index, // Ensure unique IDs even if generated in same ms
+      name: data.name,
+      sets: data.sets,
+      reps: data.reps,
+      weight: data.weight,
       date: currentDate.toISOString(),
-      timestamp: Date.now(),
-    };
-    saveExercise(newExercise);
-    setExercises(prev => [...prev, newExercise]);
+      timestamp: timestamp + index,
+    }));
+
+    // Save each one (storage service handles arrays if we updated it, but currently it's one by one or we loop)
+    // Since saveExercise handles pushing to array and saving complete list, doing it in loop is fine but inefficient for IO.
+    // Optimization: Save all at once implies updating storage logic, but for simplicity/safety with existing code:
+    
+    // We update local state once
+    setExercises(prev => {
+      const updated = [...prev, ...newExercises];
+      // Sync to local storage with the full new list to avoid race conditions in loop
+      localStorage.setItem('ironlog_exercises', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleDeleteExercise = (id: string) => {
