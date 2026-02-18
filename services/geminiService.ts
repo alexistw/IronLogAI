@@ -1,8 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 import { Exercise } from '../types';
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We lazy load the client to prevent "process is not defined" crashes 
+// in environments where env vars aren't injected at build time (common in client-side bundling).
+let aiClient: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!aiClient) {
+    // Check if process.env.API_KEY is available safely
+    const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
+    
+    if (!apiKey) {
+      console.warn("API_KEY is missing from process.env");
+    }
+    
+    aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy_key_to_prevent_crash' });
+  }
+  return aiClient;
+};
 
 export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: string): Promise<string> => {
   if (exercises.length === 0) {
@@ -31,6 +46,7 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
   `;
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,

@@ -70,7 +70,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-dark flex flex-col items-center justify-center p-6 relative overflow-hidden supports-[min-height:100dvh]:min-h-[100dvh]">
       {/* Background Decoration */}
       <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]"></div>
       <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[100px]"></div>

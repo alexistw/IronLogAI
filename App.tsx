@@ -51,7 +51,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dark text-slate-200 font-sans selection:bg-primary/30 animate-in fade-in duration-500 flex flex-col">
+    <div className="min-h-[100dvh] bg-dark text-slate-200 font-sans selection:bg-primary/30 animate-in fade-in duration-500 flex flex-col supports-[min-height:100dvh]:min-h-[100dvh]">
       {/* Header - Visible on desktop, containing logo and logout. 
           On Mobile, we might want a simple top bar padding to avoid status bar overlap if not handled by body */}
       <div className="hidden sm:block bg-card border-b border-slate-800 p-4 sticky top-0 z-50">
