@@ -3,10 +3,9 @@ import { Exercise } from '../types';
 import { getMonday, getWeekId } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
-  CartesianGrid, Legend
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
 } from 'recharts';
-import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Trophy } from 'lucide-react';
+import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Trophy, Table2 } from 'lucide-react';
 import { Button } from './Button';
 
 interface StatsReportProps {
@@ -30,52 +29,57 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     });
   }, [exercises, selectedWeekStart]);
 
-  // Chart 1: Daily Activity (Existing)
+  // Chart 1: Daily Activity
   const dailyChartData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const data = days.map(day => ({ name: day, sets: 0, volume: 0 }));
+    const data = days.map(day => ({ name: day, sets: 0 }));
     
     weeklyExercises.forEach(ex => {
       const d = new Date(ex.date);
       const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
       if (data[dayIndex]) {
         data[dayIndex].sets += ex.sets;
-        data[dayIndex].volume += (ex.sets * ex.reps * ex.weight);
       }
     });
     return data;
   }, [weeklyExercises]);
 
-  // Chart 2: Volume by Exercise (New Request)
-  // Calculates: Weight * Sets * Reps per Exercise Name
-  const volumeByExerciseData = useMemo(() => {
-    const map = new Map<string, number>();
-    
-    weeklyExercises.forEach(ex => {
-      // Calculate volume: Weight * Sets * Reps
-      const vol = ex.weight * ex.sets * ex.reps;
-      const current = map.get(ex.name) || 0;
-      map.set(ex.name, current + vol);
-    });
+  // Statistics Grouped: Exercise -> Weight -> Total Reps
+  const groupedStats = useMemo(() => {
+    // Structure: { "Bench Press": { totalVolume: 1000, weights: { 100: 10, 80: 20 } } }
+    const groups: Record<string, { totalVolume: number, weights: Record<number, number> }> = {};
 
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value) // Sort descending
-      .slice(0, 10); // Top 10 exercises
-  }, [weeklyExercises]);
-
-  // Max Weight per Exercise (PR tracking for the week)
-  const maxWeightByExercise = useMemo(() => {
-    const map = new Map<string, number>();
     weeklyExercises.forEach(ex => {
-        const currentMax = map.get(ex.name) || 0;
-        if (ex.weight > currentMax) {
-            map.set(ex.name, ex.weight);
+        if (!groups[ex.name]) {
+            groups[ex.name] = { totalVolume: 0, weights: {} };
         }
+        
+        // Calculate total reps for this specific entry
+        const entryReps = ex.sets * ex.reps;
+        
+        // Add to weight bucket
+        if (!groups[ex.name].weights[ex.weight]) {
+            groups[ex.name].weights[ex.weight] = 0;
+        }
+        groups[ex.name].weights[ex.weight] += entryReps;
+
+        // Track total volume for sorting importance
+        groups[ex.name].totalVolume += (ex.weight * ex.sets * ex.reps);
     });
-    return Array.from(map.entries())
-        .map(([name, weight]) => ({ name, weight }))
-        .sort((a, b) => b.weight - a.weight);
+
+    // Convert to array and sort
+    return Object.entries(groups)
+        .map(([name, data]) => ({
+            name,
+            totalVolume: data.totalVolume,
+            // Convert weights map to array and sort by weight DESC (heaviest first)
+            weights: Object.entries(data.weights)
+                .map(([w, r]) => ({ weight: Number(w), reps: r }))
+                .sort((a, b) => b.weight - a.weight)
+        }))
+        // Sort exercises by total volume DESC (most trained first)
+        .sort((a, b) => b.totalVolume - a.totalVolume);
+
   }, [weeklyExercises]);
 
   const totalSets = weeklyExercises.reduce((acc, curr) => acc + curr.sets, 0);
@@ -104,7 +108,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     <div className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full">
       
       {/* Week Navigator */}
-      <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50 sticky top-0 z-20 backdrop-blur-md bg-opacity-90">
+      <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50 sticky top-0 z-20 backdrop-blur-md bg-opacity-90 shadow-lg">
         <button onClick={() => shiftWeek('prev')} className="p-3 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors">
           <CalendarDays size={20} />
         </button>
@@ -154,7 +158,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             <span className="text-xs font-bold uppercase">Total Volume 總容量</span>
           </div>
           <p className="text-3xl font-bold text-white tracking-tight">{totalVolume.toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">kg lifted (Sets × Reps × Weight)</p>
+          <p className="text-xs text-slate-500 mt-1">kg lifted (Sum of all sets)</p>
         </div>
         <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
            <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -169,73 +173,57 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </div>
       </div>
 
-      {/* Chart 1: Volume by Exercise (Horizontal Bar) */}
-      <div className="bg-card p-6 rounded-2xl border border-slate-700/50 mb-8 shadow-lg">
-        <h3 className="text-slate-200 text-sm font-bold mb-1 flex items-center gap-2">
-            <Dumbbell size={16} className="text-primary"/>
-            Training Focus 訓練重心
-        </h3>
-        <p className="text-slate-500 text-xs mb-6">Volume Distribution (Weight × Sets × Reps)</p>
-        
-        <div className="h-[300px] w-full">
-          {volumeByExerciseData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-                data={volumeByExerciseData} 
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-            >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.5} />
-                <XAxis type="number" hide />
-                <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    width={80} 
-                    tick={{ fill: '#94a3b8', fontSize: 11 }}
-                    interval={0}
-                />
-                <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
-                    itemStyle={{ color: '#10b981' }}
-                    formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volume']}
-                />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                {volumeByExerciseData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill="#10b981" fillOpacity={0.8} />
-                ))}
-                </Bar>
-            </BarChart>
-            </ResponsiveContainer>
-          ) : (
-             <div className="h-full flex items-center justify-center text-slate-600 text-sm">
-                 No data yet
-             </div>
-          )}
+      {/* NEW: Detailed Training Statistics (Grouped List) */}
+      <div className="bg-card rounded-2xl border border-slate-700/50 mb-8 overflow-hidden shadow-lg">
+        <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
+            <h3 className="text-white font-bold flex items-center gap-2">
+                <Table2 size={18} className="text-primary"/>
+                Training Statistics 訓練統計
+            </h3>
+            <span className="text-[10px] text-slate-500 font-mono bg-slate-900/50 px-2 py-1 rounded">
+                WEIGHT • TOTAL REPS
+            </span>
         </div>
-      </div>
-
-      {/* Stats List: Heaviest Lifts */}
-      <div className="bg-card rounded-2xl border border-slate-700/50 mb-8 overflow-hidden">
-         <div className="p-4 border-b border-slate-700/50 flex justify-between items-center">
-             <h3 className="text-slate-200 text-sm font-bold flex items-center gap-2">
-                 <Trophy size={16} className="text-yellow-500" />
-                 Weekly PRs 本週最重
-             </h3>
-             <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded">Top Weight</span>
-         </div>
-         <div className="divide-y divide-slate-800">
-             {maxWeightByExercise.length > 0 ? (
-                 maxWeightByExercise.slice(0, 5).map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-4 hover:bg-slate-800/30 transition-colors">
-                        <span className="text-slate-300 text-sm font-medium">{item.name}</span>
-                        <span className="text-white font-bold font-mono">{item.weight} <span className="text-slate-500 text-xs font-normal">kg</span></span>
+        
+        <div className="divide-y divide-slate-800">
+            {groupedStats.length > 0 ? (
+                groupedStats.map((exercise, idx) => (
+                    <div key={idx} className="p-5 hover:bg-slate-800/20 transition-colors">
+                        {/* Exercise Header */}
+                        <div className="flex justify-between items-baseline mb-3">
+                            <h4 className="text-lg font-bold text-slate-200">{exercise.name}</h4>
+                            <span className="text-xs text-slate-500 font-mono">Vol: {exercise.totalVolume.toLocaleString()}kg</span>
+                        </div>
+                        
+                        {/* Weight Breakdowns */}
+                        <div className="space-y-2">
+                            {exercise.weights.map((w, wIdx) => (
+                                <div key={wIdx} className="flex items-center justify-between group">
+                                    <div className="flex items-center gap-3 w-full">
+                                        {/* Weight Pill */}
+                                        <div className="bg-slate-800 border border-slate-700 text-primary font-bold px-3 py-1 rounded-md min-w-[80px] text-center text-sm shadow-sm">
+                                            {w.weight} <span className="text-[10px] font-normal text-slate-500">kg</span>
+                                        </div>
+                                        {/* Visual Line Connector */}
+                                        <div className="h-[1px] bg-slate-800 flex-1"></div>
+                                        {/* Reps Count */}
+                                        <div className="text-white font-mono font-medium flex items-center gap-1">
+                                            <span className="text-lg">{w.reps}</span>
+                                            <span className="text-xs text-slate-500">reps</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                 ))
-             ) : (
-                <div className="p-8 text-center text-slate-600 text-sm">No lifts recorded yet</div>
-             )}
-         </div>
+                ))
+            ) : (
+                <div className="p-8 text-center text-slate-500 text-sm">
+                    No workout data for this week.
+                    <br/>本週尚無訓練數據。
+                </div>
+            )}
+        </div>
       </div>
 
       {/* Chart 2: Daily Sets Activity */}

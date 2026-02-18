@@ -5,22 +5,15 @@ let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    let apiKey = '';
-    try {
-      // Robust check for environment variable
-      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-        apiKey = process.env.API_KEY;
-      }
-    } catch (e) {
-      console.warn("Error accessing environment variables:", e);
+    // Directly accessing process.env.API_KEY as per standard and to ensure bundlers replace it correctly.
+    const apiKey = process.env.API_KEY;
+    
+    if (!apiKey) {
+      console.error("IRONLOG ERROR: process.env.API_KEY is undefined. AI features will fail.");
     }
     
-    // Explicit warning for debugging
-    if (!apiKey) {
-      console.error("IRONLOG ERROR: API_KEY is missing from process.env. AI features will fail.");
-    }
-
-    aiClient = new GoogleGenAI({ apiKey: apiKey });
+    // We initialize it anyway; the SDK will throw if key is invalid, which we catch later.
+    aiClient = new GoogleGenAI({ apiKey: apiKey || '' });
   }
   return aiClient;
 };
@@ -50,6 +43,7 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
 
   try {
     const ai = getAiClient();
+    
     // Using the specifically requested model
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -63,16 +57,13 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
     return response.text;
   } catch (error: any) {
     // Enhanced error logging for developer debugging
-    console.error("Gemini API Error Details:", {
-        message: error.message,
-        status: error.status, // Often contains 400/401/403/500
-        details: error.response // Sometimes contains more info
-    });
+    console.error("Gemini API Error:", error);
     
-    if (error.message?.includes("API key")) {
-        return "Configuration Error: API Key is invalid or missing. 請檢查 API Key 設定。";
+    // Common error handling
+    if (error.message?.includes("API key") || error.status === 400 || error.status === 403) {
+        return "Configuration Error: API Key is invalid or missing. 請檢查您的 API Key 設定 (process.env.API_KEY)。";
     }
 
-    return "AI Coach is currently unavailable (Network/API Error). 請稍後再試。";
+    return "AI Coach is currently unavailable. 請稍後再試。";
   }
 };
