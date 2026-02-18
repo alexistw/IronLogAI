@@ -1,20 +1,25 @@
 import { GoogleGenAI } from "@google/genai";
 import { Exercise } from '../types';
 
-// We lazy load the client to prevent "process is not defined" crashes 
-// in environments where env vars aren't injected at build time (common in client-side bundling).
+// Do NOT initialize top-level to prevent "process is not defined" crashes on mobile
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    // Check if process.env.API_KEY is available safely
-    const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
-    
-    if (!apiKey) {
-      console.warn("API_KEY is missing from process.env");
+    // Safely retrieve API Key. 
+    // Note: In Vite/Capacitor, env vars might be in import.meta.env or process.env depending on config.
+    // We check existence to prevent crashes.
+    let apiKey = '';
+    try {
+      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        apiKey = process.env.API_KEY;
+      }
+    } catch (e) {
+      console.warn("Env access error", e);
     }
     
-    aiClient = new GoogleGenAI({ apiKey: apiKey || 'dummy_key_to_prevent_crash' });
+    // Fallback to avoid null pointer if key is missing (API calls will fail later, but App won't crash on boot)
+    aiClient = new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
   }
   return aiClient;
 };

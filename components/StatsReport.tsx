@@ -3,7 +3,7 @@ import { Exercise } from '../types';
 import { getMonday, getWeekId } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info } from 'lucide-react';
+import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun } from 'lucide-react';
 import { Button } from './Button';
 
 interface StatsReportProps {
@@ -60,9 +60,11 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     setAiReport(null); // Reset report when changing weeks
   };
 
-  // Auto-suggest checking last week if it's Monday and we are viewing current week
-  const isMonday = new Date().getDay() === 1;
-  const isViewingCurrentWeek = getWeekId(selectedWeekStart) === getWeekId(new Date());
+  // Logic for Monday Noon
+  const now = new Date();
+  const isMonday = now.getDay() === 1;
+  const isAfterNoon = now.getHours() >= 12;
+  const isViewingCurrentWeek = getWeekId(selectedWeekStart) === getWeekId(now);
 
   return (
     <div className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full">
@@ -88,19 +90,26 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </button>
       </div>
 
+      {/* Monday Noon Alert */}
       {isMonday && isViewingCurrentWeek && (
         <div 
             onClick={() => shiftWeek('prev')}
             className="mb-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/50 p-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-800 transition-colors"
         >
             <div className="flex items-center gap-3">
-                <BrainCircuit className="text-indigo-400" size={24} />
+                {isAfterNoon ? <Sun className="text-yellow-400" size={24} /> : <BrainCircuit className="text-indigo-400" size={24} />}
                 <div>
-                    <h3 className="text-indigo-200 font-semibold">It's Monday! 週一到了！</h3>
-                    <p className="text-indigo-300/70 text-sm">Tap to view last week's summary. 點擊查看上週總結</p>
+                    <h3 className="text-indigo-200 font-semibold">
+                      {isAfterNoon ? "It's Monday Noon! 週一午安" : "Monday Morning 週一早安"}
+                    </h3>
+                    <p className="text-indigo-300/70 text-sm">
+                      {isAfterNoon 
+                        ? "Perfect time to review last week's gains. 中午了，來回顧上週成果吧！" 
+                        : "Have a great start to the week. 祝您本週訓練順利。"}
+                    </p>
                 </div>
             </div>
-            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+            {isAfterNoon && <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>}
         </div>
       )}
 
