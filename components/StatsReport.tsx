@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Exercise } from '../types';
 import { getMonday, getWeekId } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
+  CartesianGrid, Legend
+} from 'recharts';
+import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Trophy } from 'lucide-react';
 import { Button } from './Button';
 
 interface StatsReportProps {
@@ -27,8 +30,8 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     });
   }, [exercises, selectedWeekStart]);
 
-  // Chart Data Preparation
-  const chartData = useMemo(() => {
+  // Chart 1: Daily Activity (Existing)
+  const dailyChartData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const data = days.map(day => ({ name: day, sets: 0, volume: 0 }));
     
@@ -41,6 +44,38 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
       }
     });
     return data;
+  }, [weeklyExercises]);
+
+  // Chart 2: Volume by Exercise (New Request)
+  // Calculates: Weight * Sets * Reps per Exercise Name
+  const volumeByExerciseData = useMemo(() => {
+    const map = new Map<string, number>();
+    
+    weeklyExercises.forEach(ex => {
+      // Calculate volume: Weight * Sets * Reps
+      const vol = ex.weight * ex.sets * ex.reps;
+      const current = map.get(ex.name) || 0;
+      map.set(ex.name, current + vol);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value) // Sort descending
+      .slice(0, 10); // Top 10 exercises
+  }, [weeklyExercises]);
+
+  // Max Weight per Exercise (PR tracking for the week)
+  const maxWeightByExercise = useMemo(() => {
+    const map = new Map<string, number>();
+    weeklyExercises.forEach(ex => {
+        const currentMax = map.get(ex.name) || 0;
+        if (ex.weight > currentMax) {
+            map.set(ex.name, ex.weight);
+        }
+    });
+    return Array.from(map.entries())
+        .map(([name, weight]) => ({ name, weight }))
+        .sort((a, b) => b.weight - a.weight);
   }, [weeklyExercises]);
 
   const totalSets = weeklyExercises.reduce((acc, curr) => acc + curr.sets, 0);
@@ -57,10 +92,9 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     const newDate = new Date(selectedWeekStart);
     newDate.setDate(selectedWeekStart.getDate() + (direction === 'next' ? 7 : -7));
     setSelectedWeekStart(newDate);
-    setAiReport(null); // Reset report when changing weeks
+    setAiReport(null);
   };
 
-  // Logic for Monday Noon
   const now = new Date();
   const isMonday = now.getDay() === 1;
   const isAfterNoon = now.getHours() >= 12;
@@ -70,7 +104,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     <div className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full">
       
       {/* Week Navigator */}
-      <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50">
+      <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50 sticky top-0 z-20 backdrop-blur-md bg-opacity-90">
         <button onClick={() => shiftWeek('prev')} className="p-3 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors">
           <CalendarDays size={20} />
         </button>
@@ -90,54 +124,126 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </button>
       </div>
 
-      {/* Monday Noon Alert */}
+      {/* Monday Alert */}
       {isMonday && isViewingCurrentWeek && (
-        <div 
-            onClick={() => shiftWeek('prev')}
-            className="mb-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/50 p-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-800 transition-colors"
-        >
+        <div className="mb-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/50 p-4 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-3">
                 {isAfterNoon ? <Sun className="text-yellow-400" size={24} /> : <BrainCircuit className="text-indigo-400" size={24} />}
                 <div>
                     <h3 className="text-indigo-200 font-semibold">
-                      {isAfterNoon ? "It's Monday Noon! 週一午安" : "Monday Morning 週一早安"}
+                      {isAfterNoon ? "Monday Noon Check-in 週一午安" : "Monday Start 週一早安"}
                     </h3>
                     <p className="text-indigo-300/70 text-sm">
                       {isAfterNoon 
-                        ? "Perfect time to review last week's gains. 中午了，來回顧上週成果吧！" 
-                        : "Have a great start to the week. 祝您本週訓練順利。"}
+                        ? "Time to review your stats! 快來看看本週數據！" 
+                        : "Ready to crush this week? 準備好開始了嗎？"}
                     </p>
                 </div>
             </div>
-            {isAfterNoon && <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>}
         </div>
       )}
 
-      {/* Key Metrics */}
+      {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-card p-5 rounded-2xl border border-slate-700/50">
+        <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <TrendingUp size={64} />
+          </div>
           <div className="flex items-center gap-2 mb-2 text-slate-400">
             <TrendingUp size={16} />
-            <span className="text-xs font-bold uppercase">Volume 容量</span>
+            <span className="text-xs font-bold uppercase">Total Volume 總容量</span>
           </div>
-          <p className="text-3xl font-bold text-white">{totalVolume.toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">Total KG lifted 總負重</p>
+          <p className="text-3xl font-bold text-white tracking-tight">{totalVolume.toLocaleString()}</p>
+          <p className="text-xs text-slate-500 mt-1">kg lifted (Sets × Reps × Weight)</p>
         </div>
-        <div className="bg-card p-5 rounded-2xl border border-slate-700/50">
-           <div className="flex items-center gap-2 mb-2 text-slate-400">
-            <TrendingUp size={16} />
-            <span className="text-xs font-bold uppercase">Sets 組數</span>
+        <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
+           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Dumbbell size={64} />
           </div>
-          <p className="text-3xl font-bold text-primary">{totalSets}</p>
-          <p className="text-xs text-slate-500 mt-1">Sets completed 完成組數</p>
+           <div className="flex items-center gap-2 mb-2 text-slate-400">
+            <Dumbbell size={16} />
+            <span className="text-xs font-bold uppercase">Total Sets 總組數</span>
+          </div>
+          <p className="text-3xl font-bold text-primary tracking-tight">{totalSets}</p>
+          <p className="text-xs text-slate-500 mt-1">Sets completed</p>
         </div>
       </div>
 
-      {/* Chart */}
+      {/* Chart 1: Volume by Exercise (Horizontal Bar) */}
+      <div className="bg-card p-6 rounded-2xl border border-slate-700/50 mb-8 shadow-lg">
+        <h3 className="text-slate-200 text-sm font-bold mb-1 flex items-center gap-2">
+            <Dumbbell size={16} className="text-primary"/>
+            Training Focus 訓練重心
+        </h3>
+        <p className="text-slate-500 text-xs mb-6">Volume Distribution (Weight × Sets × Reps)</p>
+        
+        <div className="h-[300px] w-full">
+          {volumeByExerciseData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+            <BarChart 
+                data={volumeByExerciseData} 
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+            >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.5} />
+                <XAxis type="number" hide />
+                <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    width={80} 
+                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    interval={0}
+                />
+                <Tooltip 
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
+                    itemStyle={{ color: '#10b981' }}
+                    formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volume']}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                {volumeByExerciseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill="#10b981" fillOpacity={0.8} />
+                ))}
+                </Bar>
+            </BarChart>
+            </ResponsiveContainer>
+          ) : (
+             <div className="h-full flex items-center justify-center text-slate-600 text-sm">
+                 No data yet
+             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats List: Heaviest Lifts */}
+      <div className="bg-card rounded-2xl border border-slate-700/50 mb-8 overflow-hidden">
+         <div className="p-4 border-b border-slate-700/50 flex justify-between items-center">
+             <h3 className="text-slate-200 text-sm font-bold flex items-center gap-2">
+                 <Trophy size={16} className="text-yellow-500" />
+                 Weekly PRs 本週最重
+             </h3>
+             <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded">Top Weight</span>
+         </div>
+         <div className="divide-y divide-slate-800">
+             {maxWeightByExercise.length > 0 ? (
+                 maxWeightByExercise.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-4 hover:bg-slate-800/30 transition-colors">
+                        <span className="text-slate-300 text-sm font-medium">{item.name}</span>
+                        <span className="text-white font-bold font-mono">{item.weight} <span className="text-slate-500 text-xs font-normal">kg</span></span>
+                    </div>
+                 ))
+             ) : (
+                <div className="p-8 text-center text-slate-600 text-sm">No lifts recorded yet</div>
+             )}
+         </div>
+      </div>
+
+      {/* Chart 2: Daily Sets Activity */}
       <div className="bg-card p-6 rounded-2xl border border-slate-700/50 mb-8 h-64 shadow-lg">
-        <h3 className="text-slate-300 text-sm font-semibold mb-6">Activity Distribution 訓練分佈</h3>
+        <h3 className="text-slate-300 text-sm font-semibold mb-6">Daily Frequency 每日頻率</h3>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
+          <BarChart data={dailyChartData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
             <XAxis 
                 dataKey="name" 
                 axisLine={false} 
@@ -148,13 +254,8 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             <Tooltip 
                 cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                 contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
-                itemStyle={{ color: '#10b981' }}
             />
-            <Bar dataKey="sets" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.sets > 0 ? '#10b981' : '#334155'} />
-              ))}
-            </Bar>
+            <Bar dataKey="sets" radius={[4, 4, 0, 0]} barSize={30} fill="#3b82f6" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -186,16 +287,10 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
           )}
         </div>
 
-        {/* Model Info Disclaimer */}
         {showInfo && (
            <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-600 mb-4 text-xs text-slate-300 relative z-20 animate-in fade-in slide-in-from-top-1">
-             <p className="font-semibold mb-1 text-white">Model Info 模型資訊:</p>
+             <p className="font-semibold mb-1 text-white">Model Info:</p>
              <p>Powered by <strong>Gemini 3 Flash Preview</strong>.</p>
-             <p className="mt-1 opacity-80">
-               Cost: Free tier usage for standard personal logging. High volume commercial use may incur fees.
-               <br/>
-               費用：個人標準使用量通常在免費額度內。
-             </p>
            </div>
         )}
 
