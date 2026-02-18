@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Button } from './Button';
+import React, { useState, useEffect } from 'react';
 import { ScanFace, Fingerprint, Lock, ShieldCheck } from 'lucide-react';
 import { cn } from '../utils';
+import { NativeBiometric } from '@capacitor-community/native-biometric';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -9,63 +9,63 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [error, setError] = useState<string>('');
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
+
+  // Check if biometrics are available on mount
+  useEffect(() => {
+    const checkAvailability = async () => {
+      try {
+        const result = await NativeBiometric.isAvailable();
+        setIsAvailable(result.isAvailable);
+      } catch (e) {
+        console.log("Biometric check failed or plugin not installed", e);
+        setIsAvailable(false);
+      }
+    };
+    checkAvailability();
+  }, []);
 
   const handleBiometricLogin = async () => {
     setError('');
-    setIsAnimating(true);
-
-    // Check if WebAuthn is supported
-    if (!window.PublicKeyCredential) {
-      setError("Biometrics not supported on this device. 您的裝置不支援生物辨識。");
-      setIsAnimating(false);
-      return;
-    }
+    setIsProcessing(true);
 
     try {
-      // We use 'create' here as a "presence check" which triggers FaceID/TouchID
-      // This is a client-side only implementation for privacy locking.
-      // In a real secure app, you would use 'get' and verify against a backend server.
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
+      const result = await NativeBiometric.isAvailable();
 
-      await navigator.credentials.create({
-        publicKey: {
-          challenge: challenge,
-          rp: {
-            name: "IronLog AI",
-          },
-          user: {
-            id: new Uint8Array(16),
-            name: "user@ironlog.ai",
-            displayName: "IronLog User",
-          },
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7 }, // ES256
-            { type: "public-key", alg: -257 }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform", // Forces built-in FaceID/TouchID
-            userVerification: "required", // Forces the biometric check
-          },
-          timeout: 60000,
-          attestation: "direct"
-        }
+      if (!result.isAvailable) {
+        setError("Biometrics not set up or not available on this device. 此裝置未設定生物辨識。");
+        setIsProcessing(false);
+        return;
+      }
+
+      const verified = await NativeBiometric.verifyIdentity({
+        reason: "Access your IronLog workout history",
+        title: "IronLog Login",
+        subtitle: "Log in",
+        description: "Please use Face ID or Touch ID to continue",
       });
 
-      // If successful (no error thrown), we log in
-      onLogin();
-    } catch (err) {
+      if (verified) {
+        onLogin();
+      } else {
+        setError("Verification failed.");
+      }
+    } catch (err: any) {
       console.error(err);
-      // Fallback logic or error display
-      setError("FaceID/TouchID verification failed. Please try again. 驗證失敗，請重試。");
+      // Handle user cancellation or errors
+      if (err?.message?.includes('Cancel') || err?.code === 10 || err?.code === 13) {
+         // User cancelled, do nothing specific
+      } else {
+         setError("Authentication failed. Please try again or use password.");
+      }
     } finally {
-      setIsAnimating(false);
+      setIsProcessing(false);
     }
   };
 
   const handleSkip = () => {
-    // Fallback for devices without biometrics or for testing
+    // Fallback for dev/testing
     onLogin(); 
   };
 
@@ -88,24 +88,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <div className="w-full space-y-4">
           <button
             onClick={handleBiometricLogin}
+            disabled={isProcessing}
             className={cn(
               "group relative w-full h-16 bg-gradient-to-r from-primary to-emerald-600 rounded-2xl flex items-center justify-center gap-3 text-white font-semibold text-lg shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]",
-              isAnimating && "opacity-80 cursor-wait"
+              isProcessing && "opacity-80 cursor-wait",
+              !isAvailable && "opacity-50 grayscale"
             )}
           >
             <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm group-hover:bg-white/30 transition-colors">
               <ScanFace size={24} />
             </div>
-            <span>Login with FaceID 使用臉部解鎖</span>
-            
-            {/* Ripple Effect Animation Container */}
-            {isAnimating && (
-               <span className="absolute inset-0 rounded-2xl ring-4 ring-white/30 animate-ping"></span>
-            )}
+            <span>{isProcessing ? "Verifying..." : "Login with FaceID"}</span>
           </button>
 
           <button
-             onClick={handleBiometricLogin}
+             onClick={handleBiometricLogin} // In a real app, this might toggle a password field
              className="w-full py-3 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-300 transition-colors text-sm"
           >
             <Fingerprint size={16} />
@@ -121,10 +118,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         )}
 
-        {/* Dev Skip Link (Optional, good for generic browser testing) */}
+        {/* Dev Skip Link */}
         <div className="pt-8">
            <button onClick={handleSkip} className="text-xs text-slate-700 hover:text-slate-500 underline decoration-slate-800">
-             Use Password (Dev Skip) 使用密碼登入
+             Developer Skip (No Auth) 開發者略過
            </button>
         </div>
 
