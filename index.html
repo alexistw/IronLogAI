@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>IronLog AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -29,7 +29,25 @@
         font-family: 'Inter', sans-serif;
         background-color: #0f172a;
         color: #f8fafc;
+        /* Disable text selection for app-like feel */
+        -webkit-user-select: none;
+        user-select: none;
+        /* Handle iOS Safe Areas */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
       }
+      
+      /* Utilities for safe area padding */
+      .pt-safe {
+        padding-top: env(safe-area-inset-top);
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .mb-safe {
+        margin-bottom: env(safe-area-inset-bottom);
+      }
+
       /* Hide scrollbar for cleaner mobile UI */
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -37,6 +55,12 @@
       .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+
+      /* Input fields should be selectable */
+      input, textarea {
+        -webkit-user-select: text;
+        user-select: text;
       }
     </style>
   <script type="importmap">

@@ -51,8 +51,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dark text-slate-200 font-sans selection:bg-primary/30 animate-in fade-in duration-500">
-      {/* Header - Visible on desktop, containing logo and logout */}
+    <div className="min-h-screen bg-dark text-slate-200 font-sans selection:bg-primary/30 animate-in fade-in duration-500 flex flex-col">
+      {/* Header - Visible on desktop, containing logo and logout. 
+          On Mobile, we might want a simple top bar padding to avoid status bar overlap if not handled by body */}
       <div className="hidden sm:block bg-card border-b border-slate-800 p-4 sticky top-0 z-50">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -68,8 +69,11 @@ export default function App() {
             </button>
         </div>
       </div>
+      
+      {/* Mobile Status Bar Spacer (Only shows on mobile) */}
+      <div className="sm:hidden h-2 w-full"></div>
 
-      <main className="min-h-screen pb-32">
+      <main className="flex-1 pb-32 w-full">
         {activeTab === Tab.LOG && (
           <DailyLog 
             currentDate={currentDate} 
@@ -107,19 +111,19 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Action Button for Adding Workout (Only visible on Log and Stats tabs) */}
+      {/* Floating Action Button for Adding Workout */}
       {activeTab !== Tab.SETTINGS && (
         <button
             onClick={() => setIsAddModalOpen(true)}
-            className="fixed bottom-24 right-6 bg-primary hover:bg-emerald-500 text-white p-4 rounded-full shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 z-40"
+            className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 bg-primary hover:bg-emerald-500 text-white p-4 rounded-full shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 z-40"
         >
             <PlusCircle size={28} />
         </button>
       )}
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-lg border-t border-slate-800 px-6 py-4 z-50 pb-safe">
-        <div className="max-w-md mx-auto flex justify-between items-center px-4">
+      {/* Bottom Navigation with Safe Area Padding */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-lg border-t border-slate-800 z-50 pb-safe">
+        <div className="max-w-md mx-auto flex justify-between items-center px-6 py-4">
           <button
             onClick={() => setActiveTab(Tab.LOG)}
             className={cn(
