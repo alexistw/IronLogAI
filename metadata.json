@@ -1,0 +1,5 @@
+{
+  "name": "IronLog AI",
+  "description": "智能健身追蹤器，記錄每週組數與次數，每週自動重置，並於週一提供 AI 驅動的表現總結。 A smart workout tracker that logs weekly sets/reps, resets weekly, and provides AI performance summaries on Mondays.",
+  "requestFramePermissions": []
+}
