@@ -40,6 +40,7 @@
         /* Handle iOS Safe Areas */
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
+        min-height: 100vh;
       }
       
       /* Utilities for safe area padding */
@@ -85,5 +86,7 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- CRITICAL FIX: Include the main entry script -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
