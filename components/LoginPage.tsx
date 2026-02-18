@@ -39,25 +39,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         return;
       }
 
-      const verified = await NativeBiometric.verifyIdentity({
+      // The verifyIdentity function throws an error if authentication fails.
+      // It returns void (undefined) if successful, NOT true.
+      await NativeBiometric.verifyIdentity({
         reason: "Access your IronLog workout history",
         title: "IronLog Login",
         subtitle: "Log in",
         description: "Please use Face ID or Touch ID to continue",
       });
 
-      if (verified) {
-        onLogin();
-      } else {
-        setError("Verification failed.");
-      }
+      // If code reaches here, authentication was successful
+      onLogin();
+      
     } catch (err: any) {
-      console.error(err);
+      console.error("Biometric Error:", err);
       // Handle user cancellation or errors
+      // Error code 10/13 or message including 'Cancel' usually means user cancelled
       if (err?.message?.includes('Cancel') || err?.code === 10 || err?.code === 13) {
-         // User cancelled, do nothing specific
+         // User cancelled, clear processing state but don't show scary error
+         setIsProcessing(false);
       } else {
-         setError("Authentication failed. Please try again or use password.");
+         setError("Authentication failed. Please try again.");
       }
     } finally {
       setIsProcessing(false);
