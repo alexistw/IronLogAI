@@ -5,14 +5,13 @@ let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    // Directly accessing process.env.API_KEY as per standard and to ensure bundlers replace it correctly.
+    // Strictly follow instructions: access process.env.API_KEY directly.
+    // If the environment is not set up correctly (e.g. Vite without define), this might be undefined.
     const apiKey = process.env.API_KEY;
     
-    if (!apiKey) {
-      console.error("IRONLOG ERROR: process.env.API_KEY is undefined. AI features will fail.");
-    }
+    // Debug log to help users verify if their environment variable is being read
+    console.log("[IronLog] Initializing Gemini. Key present:", !!apiKey);
     
-    // We initialize it anyway; the SDK will throw if key is invalid, which we catch later.
     aiClient = new GoogleGenAI({ apiKey: apiKey || '' });
   }
   return aiClient;
@@ -56,14 +55,13 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
 
     return response.text;
   } catch (error: any) {
-    // Enhanced error logging for developer debugging
     console.error("Gemini API Error:", error);
     
-    // Common error handling
+    // Provide specific error feedback
     if (error.message?.includes("API key") || error.status === 400 || error.status === 403) {
-        return "Configuration Error: API Key is invalid or missing. 請檢查您的 API Key 設定 (process.env.API_KEY)。";
+        return `Configuration Error: API Key issue. (Details: ${error.message || error.status})`;
     }
 
-    return "AI Coach is currently unavailable. 請稍後再試。";
+    return `AI Coach Error: ${error.message || "Unknown error"}. 請稍後再試。`;
   }
 };

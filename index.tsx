@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -13,11 +13,8 @@ interface ErrorBoundaryState {
 }
 
 // Error Boundary to catch crashes and show them on the phone screen
-// Fix: Extend Component explicitly for better type inference
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly declare state property to satisfy TS strict class property checks
-  public state: ErrorBoundaryState;
-
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Use constructor to ensure this.props is correctly initialized and typed
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {

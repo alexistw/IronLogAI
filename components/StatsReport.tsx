@@ -180,9 +180,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                 <Table2 size={18} className="text-primary"/>
                 Training Statistics 訓練統計
             </h3>
-            <span className="text-[10px] text-slate-500 font-mono bg-slate-900/50 px-2 py-1 rounded">
-                WEIGHT • TOTAL REPS
-            </span>
         </div>
         
         <div className="divide-y divide-slate-800">
