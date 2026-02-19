@@ -9,16 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.4",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
+    "@capgo/capacitor-native-biometric": "^8.3.7",
     "@google/genai": "^1.41.0",
-    "recharts": "^3.7.0",
-    "react": "^19.2.4",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^3.4.1",
     "lucide-react": "^0.574.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.1",
     "@capacitor-community/native-biometric": "latest"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",

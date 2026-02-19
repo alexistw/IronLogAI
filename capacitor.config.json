@@ -1,6 +1,6 @@
 {
-  "appId": "com.ironlog.ai",
-  "appName": "IronLog AI",
+  "appId": "com.ironlog.app",
+  "appName": "IronLog",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

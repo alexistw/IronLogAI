@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ScanFace, Fingerprint, Lock, ShieldCheck } from 'lucide-react';
 import { cn } from '../utils';
-import { NativeBiometric } from '@capacitor-community/native-biometric';
+import { NativeBiometric } from "@capgo/capacitor-native-biometric";
+
 
 interface LoginPageProps {
   onLogin: () => void;
