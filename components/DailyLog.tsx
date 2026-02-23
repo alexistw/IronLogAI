@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Exercise } from '../types';
 import { ExerciseCard } from './ExerciseCard';
-import { isSameDay, DAYS_OF_WEEK } from '../utils';
+import { isSameDay, DAYS_OF_WEEK, getExerciseVolumeKg } from '../utils';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 interface DailyLogProps {
@@ -21,6 +21,10 @@ export const DailyLog: React.FC<DailyLogProps> = ({
   const dailyExercises = useMemo(() => 
     exercises.filter(ex => isSameDay(new Date(ex.date), currentDate)),
   [exercises, currentDate]);
+  const dailyVolumeKg = useMemo(
+    () => dailyExercises.reduce((acc, curr) => acc + getExerciseVolumeKg(curr), 0),
+    [dailyExercises]
+  );
 
   const handlePrevDay = () => {
     const newDate = new Date(currentDate);
@@ -68,7 +72,7 @@ export const DailyLog: React.FC<DailyLogProps> = ({
         <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
           <p className="text-slate-400 text-xs">Total Volume 總容量</p>
           <p className="text-2xl font-bold text-secondary">
-            {dailyExercises.reduce((acc, curr) => acc + (curr.weight * curr.sets * curr.reps), 0).toLocaleString()} <span className="text-xs text-slate-500 font-normal">kg</span>
+            {Math.round(dailyVolumeKg).toLocaleString()} <span className="text-xs text-slate-500 font-normal">kg-eq</span>
           </p>
         </div>
       </div>

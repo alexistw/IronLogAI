@@ -8,6 +8,8 @@ interface ExerciseCardProps {
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete }) => {
+  const weightModeLabel = exercise.weightMode === 'single_hand' ? '1H' : '2H';
+
   return (
     <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm flex items-center justify-between group">
       <div className="flex-1">
@@ -23,7 +25,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete }
           </div>
           <div className="flex items-center gap-1">
             <Dumbbell size={14} className="text-accent" />
-            <span>{exercise.weight} kg</span>
+            <span>{exercise.weight} {exercise.weightUnit} ({weightModeLabel})</span>
           </div>
         </div>
       </div>

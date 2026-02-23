@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Exercise } from '../types';
+import { getExerciseEffectiveWeightKg } from '../utils';
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -24,20 +25,21 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
 
   // Optimize token usage by summarizing data more compactly
   const dataSummary = exercises.map(ex => 
-    `${ex.name}: ${ex.sets}x${ex.reps}@${ex.weight}kg`
+    `${ex.name}: ${ex.sets}x${ex.reps}@${ex.weight}${ex.weightUnit}(${ex.weightMode === 'single_hand' ? 'single-hand' : 'double-hand'}), effective~${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg`
   ).join(', ');
 
   const prompt = `
     Role: Fitness Coach.
     Context: Weekly workout log starting ${weekStart}.
     Data: ${dataSummary}
+    Note: "single-hand" means the logged weight is per hand and effective load is converted as both hands combined.
     
     Task:
     1. Briefly analyze volume/consistency.
     2. One compliment (Strength).
     3. One improvement tip.
     
-    Constraint: Output in Traditional Chinese (Taiwan). Keep it under 150 words. Be motivating.
+    Constraint: Output in Traditional Chinese (Taiwan). Keep it under 200 words. Be motivating.
   `;
 
   try {

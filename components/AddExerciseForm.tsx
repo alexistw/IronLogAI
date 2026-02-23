@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronDown } from 'lucide-react';
-import { cn } from '../utils';
+import { cn, LB_TO_KG } from '../utils';
+import { WeightMode, WeightUnit } from '../types';
 
 interface AddExerciseFormProps {
-  onAdd: (exercises: { name: string, sets: number, reps: number, weight: number }[]) => void;
+  onAdd: (exercises: { name: string, sets: number, reps: number, weight: number, weightUnit: WeightUnit, weightMode: WeightMode }[]) => void;
   onClose: () => void;
 }
 
@@ -17,10 +18,12 @@ interface SetRow {
 
 export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose }) => {
   const [name, setName] = useState('');
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg');
+  const [weightMode, setWeightMode] = useState<WeightMode>('double_hand');
   
   // Initialize with one empty row
   const [rows, setRows] = useState<SetRow[]>([
-    { id: '1', sets: '1', reps: '10', weight: '' }
+    { id: '1', sets: '', reps: '', weight: '' }
   ]);
 
   // Handle ESC key to close
@@ -33,12 +36,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
   }, [onClose]);
 
   const handleAddRow = () => {
-    const lastRow = rows[rows.length - 1];
     const newRow: SetRow = {
       id: Math.random().toString(36).substr(2, 9),
-      sets: '1', 
-      reps: lastRow ? lastRow.reps : '10',
-      weight: lastRow ? lastRow.weight : '',
+      sets: '',
+      reps: '',
+      weight: '',
     };
     setRows([...rows, newRow]);
   };
@@ -53,6 +55,39 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
     setRows(rows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
+  const handleNumberInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const formatConvertedWeight = (value: number) => {
+    const rounded = Math.round(value * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/, '');
+  };
+
+  const convertWeightValuesToUnit = (nextUnit: WeightUnit) => {
+    if (nextUnit === weightUnit) return;
+
+    setRows(prevRows => prevRows.map(row => {
+      if (row.weight.trim() === '') return row;
+
+      const current = Number(row.weight);
+      if (Number.isNaN(current)) return row;
+
+      const converted =
+        nextUnit === 'kg'
+          ? current * LB_TO_KG
+          : current / LB_TO_KG;
+
+      return { ...row, weight: formatConvertedWeight(converted) };
+    }));
+
+    setWeightUnit(nextUnit);
+  };
+
+  const handleToggleWeightUnitConvert = () => {
+    convertWeightValuesToUnit(weightUnit === 'kg' ? 'lb' : 'kg');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
@@ -61,7 +96,9 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
       name: name,
       sets: Number(row.sets) || 1,
       reps: Number(row.reps) || 0,
-      weight: Number(row.weight) || 0
+      weight: Number(row.weight) || 0,
+      weightUnit,
+      weightMode,
     }));
 
     onAdd(dataToAdd);
@@ -103,6 +140,74 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
             />
           </div>
 
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
+                Weight Unit
+              </label>
+              <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
+                <button
+                  type="button"
+                  onClick={() => convertWeightValuesToUnit('kg')}
+                  className={cn(
+                    "rounded-xl py-2 text-sm font-semibold transition-colors",
+                    weightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                  )}
+                >
+                  kg
+                </button>
+                <button
+                  type="button"
+                  onClick={() => convertWeightValuesToUnit('lb')}
+                  className={cn(
+                    "rounded-xl py-2 text-sm font-semibold transition-colors",
+                    weightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                  )}
+                >
+                  lb
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleWeightUnitConvert}
+                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900/70 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+              >
+                Convert to {weightUnit === 'kg' ? 'lb' : 'kg'}
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
+                Weight Type
+              </label>
+              <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
+                <button
+                  type="button"
+                  onClick={() => setWeightMode('single_hand')}
+                  className={cn(
+                    "rounded-xl py-2 text-sm font-semibold transition-colors",
+                    weightMode === 'single_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                  )}
+                >
+                  Per Hand
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWeightMode('double_hand')}
+                  className={cn(
+                    "rounded-xl py-2 text-sm font-semibold transition-colors",
+                    weightMode === 'double_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                  )}
+                >
+                  Total
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2 ml-1">
+                Per Hand = entered weight is for one hand (stats convert to total load)
+              </p>
+            </div>
+          </div>
+
           {/* Sets Container */}
           <div className="space-y-4 mb-20"> {/* Bottom padding for potential keyboard overlap buffering */}
             <div className="flex items-center justify-between px-1">
@@ -130,6 +235,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                     inputMode="numeric"
                     value={row.sets}
                     onChange={(e) => handleRowChange(row.id, 'sets', e.target.value)}
+                    onFocus={handleNumberInputFocus}
                     className="w-full bg-slate-900 border-none rounded-xl py-3 pl-7 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
                     placeholder="1"
                   />
@@ -143,7 +249,9 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                     inputMode="numeric"
                     value={row.reps}
                     onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
+                    onFocus={handleNumberInputFocus}
                     className="w-full bg-slate-900 border-none rounded-xl py-3 pl-7 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
+                    placeholder="10"
                   />
                 </div>
                 <div className="col-span-4 relative">
@@ -155,6 +263,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                     inputMode="decimal"
                     value={row.weight}
                     onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
+                    onFocus={handleNumberInputFocus}
                     className="w-full bg-slate-900 border-none rounded-xl py-3 pl-7 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
                     placeholder="0"
                   />

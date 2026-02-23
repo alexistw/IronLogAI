@@ -1,4 +1,5 @@
 import { Exercise } from '../types';
+import { normalizeWeightMode, normalizeWeightUnit } from '../utils';
 
 const STORAGE_KEY = 'ironlog_exercises';
 
@@ -12,7 +13,14 @@ export const getExercises = (): Exercise[] => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return [];
   try {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((ex: any) => ({
+      ...ex,
+      weightUnit: normalizeWeightUnit(ex?.weightUnit),
+      weightMode: normalizeWeightMode(ex?.weightMode),
+    }));
   } catch (e) {
     console.error("Failed to parse exercises", e);
     return [];
