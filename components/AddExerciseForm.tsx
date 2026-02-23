@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronDown } from 'lucide-react';
+import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronLeft } from 'lucide-react';
 import { cn, LB_TO_KG } from '../utils';
 import { Exercise, WeightMode, WeightUnit } from '../types';
 
@@ -152,7 +152,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
           onClick={onClose} 
           className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full transition-colors"
         >
-          <ChevronDown size={28} />
+          <ChevronLeft size={28} />
         </button>
         <h2 className="text-lg font-bold text-white">{isEditMode ? 'Edit Workout 編輯動作' : 'Log Workout 紀錄'}</h2>
         <div className="w-8"></div> {/* Spacer to center the title */}

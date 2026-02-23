@@ -12,9 +12,27 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
   const weightModeLabel = exercise.weightMode === 'single_hand' ? '單手 / 1H' : '雙手 / 2H';
 
   return (
-    <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm flex items-center justify-between group">
-      <div className="flex-1">
-        <h3 className="text-white font-semibold text-lg mb-1">{exercise.name}</h3>
+    <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm group">
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h3 className="text-white font-semibold text-lg leading-tight">{exercise.name}</h3>
+        <div className="flex items-center gap-1 shrink-0 -mr-1">
+          <button
+            onClick={() => onEdit(exercise)}
+            className="p-2 text-slate-600 hover:text-emerald-400 hover:bg-slate-700/50 rounded-full transition-colors"
+            aria-label="Edit exercise"
+          >
+            <Pencil size={18} />
+          </button>
+          <button 
+            onClick={() => onDelete(exercise.id)}
+            className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-700/50 rounded-full transition-colors"
+            aria-label="Delete exercise"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </div>
+      <div>
         <div className="flex items-center gap-4 text-slate-400 text-sm">
           <div className="flex items-center gap-1">
             <Layers size={14} className="text-primary" />
@@ -29,22 +47,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
             <span>{exercise.weight} {exercise.weightUnit} ({weightModeLabel})</span>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-1 ml-3">
-        <button
-          onClick={() => onEdit(exercise)}
-          className="p-2 text-slate-600 hover:text-emerald-400 hover:bg-slate-700/50 rounded-full transition-colors"
-          aria-label="Edit exercise"
-        >
-          <Pencil size={18} />
-        </button>
-        <button 
-          onClick={() => onDelete(exercise.id)}
-          className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-700/50 rounded-full transition-colors"
-          aria-label="Delete exercise"
-        >
-          <Trash2 size={18} />
-        </button>
       </div>
     </div>
   );
