@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronDown } from 'lucide-react';
 import { cn, LB_TO_KG } from '../utils';
-import { WeightMode, WeightUnit } from '../types';
+import { Exercise, WeightMode, WeightUnit } from '../types';
 
 interface AddExerciseFormProps {
   onAdd: (exercises: { name: string, sets: number, reps: number, weight: number, weightUnit: WeightUnit, weightMode: WeightMode }[]) => void;
+  onUpdate?: (exercise: Exercise) => void;
+  initialExercise?: Exercise | null;
   onClose: () => void;
 }
 
@@ -16,14 +18,20 @@ interface SetRow {
   weight: string;
 }
 
-export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose }) => {
-  const [name, setName] = useState('');
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg');
-  const [weightMode, setWeightMode] = useState<WeightMode>('double_hand');
+export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, onClose }) => {
+  const isEditMode = !!initialExercise;
+  const [name, setName] = useState(initialExercise?.name ?? '');
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialExercise?.weightUnit ?? 'kg');
+  const [weightMode, setWeightMode] = useState<WeightMode>(initialExercise?.weightMode ?? 'double_hand');
   
   // Initialize with one empty row
   const [rows, setRows] = useState<SetRow[]>([
-    { id: '1', sets: '', reps: '', weight: '' }
+    {
+      id: '1',
+      sets: initialExercise ? String(initialExercise.sets) : '',
+      reps: initialExercise ? String(initialExercise.reps) : '',
+      weight: initialExercise ? String(initialExercise.weight) : '',
+    }
   ]);
 
   // Handle ESC key to close
@@ -35,7 +43,21 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
+  useEffect(() => {
+    if (!initialExercise) return;
+    setName(initialExercise.name);
+    setWeightUnit(initialExercise.weightUnit);
+    setWeightMode(initialExercise.weightMode);
+    setRows([{
+      id: '1',
+      sets: String(initialExercise.sets),
+      reps: String(initialExercise.reps),
+      weight: String(initialExercise.weight),
+    }]);
+  }, [initialExercise]);
+
   const handleAddRow = () => {
+    if (isEditMode) return;
     const newRow: SetRow = {
       id: Math.random().toString(36).substr(2, 9),
       sets: '',
@@ -101,6 +123,21 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
       weightMode,
     }));
 
+    if (isEditMode && initialExercise && onUpdate) {
+      const firstRow = dataToAdd[0];
+      onUpdate({
+        ...initialExercise,
+        name: firstRow.name,
+        sets: firstRow.sets,
+        reps: firstRow.reps,
+        weight: firstRow.weight,
+        weightUnit: firstRow.weightUnit,
+        weightMode: firstRow.weightMode,
+      });
+      onClose();
+      return;
+    }
+
     onAdd(dataToAdd);
     onClose();
   };
@@ -117,7 +154,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
         >
           <ChevronDown size={28} />
         </button>
-        <h2 className="text-lg font-bold text-white">Log Workout 紀錄</h2>
+        <h2 className="text-lg font-bold text-white">{isEditMode ? 'Edit Workout 編輯動作' : 'Log Workout 紀錄'}</h2>
         <div className="w-8"></div> {/* Spacer to center the title */}
       </div>
 
@@ -143,7 +180,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
-                Weight Unit
+                Weight Unit 重量單位
               </label>
               <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
                 <button
@@ -172,13 +209,13 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                 onClick={handleToggleWeightUnitConvert}
                 className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900/70 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
               >
-                Convert to {weightUnit === 'kg' ? 'lb' : 'kg'}
+                Convert to {weightUnit === 'kg' ? 'lb' : 'kg'} 換算成 {weightUnit === 'kg' ? 'lb' : 'kg'}
               </button>
             </div>
 
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
-                Weight Type
+                Weight Type 重量模式
               </label>
               <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
                 <button
@@ -189,7 +226,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                     weightMode === 'single_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Per Hand
+                  Per Hand 單手
                 </button>
                 <button
                   type="button"
@@ -199,11 +236,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                     weightMode === 'double_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Total
+                  Total 雙手
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 mt-2 ml-1">
-                Per Hand = entered weight is for one hand (stats convert to total load)
+                Per Hand 單手 = 輸入每手重量（統計會換算為雙手總重量）
               </p>
             </div>
           </div>
@@ -269,7 +306,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
                   />
                 </div>
                 <div className="col-span-2 flex justify-end">
-                  {rows.length > 1 ? (
+                  {rows.length > 1 && !isEditMode ? (
                     <button 
                       type="button" 
                       onClick={() => handleRemoveRow(row.id)}
@@ -298,7 +335,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onClose
         {/* Fixed Bottom Action Bar */}
         <div className="p-4 border-t border-slate-800 bg-card z-20 pb-[env(safe-area-inset-bottom)]">
             <Button type="submit" size="lg" className="w-full py-4 text-lg shadow-emerald-500/20">
-              Save Workout 儲存 ({rows.length})
+              {isEditMode ? 'Update Workout 更新動作' : `Save Workout 儲存 (${rows.length})`}
             </Button>
         </div>
       </form>

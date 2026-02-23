@@ -15,6 +15,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.LOG);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   // Load data on mount
@@ -52,6 +53,25 @@ export default function App() {
   const handleDeleteExercise = (id: string) => {
     deleteExercise(id);
     setExercises(prev => prev.filter(ex => ex.id !== id));
+  };
+
+  const handleEditExercise = (exercise: Exercise) => {
+    setEditingExercise(exercise);
+    setIsAddModalOpen(true);
+  };
+
+  const handleUpdateExercise = (updatedExercise: Exercise) => {
+    setExercises(prev => {
+      const updated = prev.map(ex => ex.id === updatedExercise.id ? updatedExercise : ex);
+      localStorage.setItem('ironlog_exercises', JSON.stringify(updated));
+      return updated;
+    });
+    setEditingExercise(null);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsAddModalOpen(false);
+    setEditingExercise(null);
   };
 
   const handleLogout = () => {
@@ -93,6 +113,7 @@ export default function App() {
             onDateChange={setCurrentDate}
             exercises={exercises}
             onDeleteExercise={handleDeleteExercise}
+            onEditExercise={handleEditExercise}
           />
         )}
         {activeTab === Tab.STATS && (
@@ -127,7 +148,10 @@ export default function App() {
       {/* Floating Action Button for Adding Workout */}
       {activeTab !== Tab.SETTINGS && (
         <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setEditingExercise(null);
+              setIsAddModalOpen(true);
+            }}
             className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 bg-primary hover:bg-emerald-500 text-white p-4 rounded-full shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 z-40"
         >
             <PlusCircle size={28} />
@@ -176,7 +200,9 @@ export default function App() {
       {isAddModalOpen && (
         <AddExerciseForm 
           onAdd={handleAddExercise} 
-          onClose={() => setIsAddModalOpen(false)} 
+          onUpdate={handleUpdateExercise}
+          initialExercise={editingExercise}
+          onClose={handleCloseAddModal} 
         />
       )}
     </div>

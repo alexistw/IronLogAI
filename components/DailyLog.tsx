@@ -9,13 +9,15 @@ interface DailyLogProps {
   onDateChange: (date: Date) => void;
   exercises: Exercise[];
   onDeleteExercise: (id: string) => void;
+  onEditExercise: (exercise: Exercise) => void;
 }
 
 export const DailyLog: React.FC<DailyLogProps> = ({ 
   currentDate, 
   onDateChange, 
   exercises, 
-  onDeleteExercise 
+  onDeleteExercise,
+  onEditExercise
 }) => {
   
   const dailyExercises = useMemo(() => 
@@ -81,7 +83,7 @@ export const DailyLog: React.FC<DailyLogProps> = ({
       <div className="space-y-1">
         {dailyExercises.length > 0 ? (
           dailyExercises.map(ex => (
-            <ExerciseCard key={ex.id} exercise={ex} onDelete={onDeleteExercise} />
+            <ExerciseCard key={ex.id} exercise={ex} onDelete={onDeleteExercise} onEdit={onEditExercise} />
           ))
         ) : (
           <div className="text-center py-12 flex flex-col items-center justify-center opacity-50">

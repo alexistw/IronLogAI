@@ -1,14 +1,15 @@
 import React from 'react';
 import { Exercise } from '../types';
-import { Trash2, Dumbbell, Repeat, Layers } from 'lucide-react';
+import { Trash2, Dumbbell, Repeat, Layers, Pencil } from 'lucide-react';
 
 interface ExerciseCardProps {
   exercise: Exercise;
   onDelete: (id: string) => void;
+  onEdit: (exercise: Exercise) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete }) => {
-  const weightModeLabel = exercise.weightMode === 'single_hand' ? '1H' : '2H';
+export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit }) => {
+  const weightModeLabel = exercise.weightMode === 'single_hand' ? '單手 / 1H' : '雙手 / 2H';
 
   return (
     <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm flex items-center justify-between group">
@@ -29,12 +30,22 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete }
           </div>
         </div>
       </div>
-      <button 
-        onClick={() => onDelete(exercise.id)}
-        className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-700/50 rounded-full transition-colors"
-      >
-        <Trash2 size={18} />
-      </button>
+      <div className="flex items-center gap-1 ml-3">
+        <button
+          onClick={() => onEdit(exercise)}
+          className="p-2 text-slate-600 hover:text-emerald-400 hover:bg-slate-700/50 rounded-full transition-colors"
+          aria-label="Edit exercise"
+        >
+          <Pencil size={18} />
+        </button>
+        <button 
+          onClick={() => onDelete(exercise.id)}
+          className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-700/50 rounded-full transition-colors"
+          aria-label="Delete exercise"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
     </div>
   );
 };

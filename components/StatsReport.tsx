@@ -213,7 +213,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                                         <div className="h-[1px] bg-slate-800 flex-1"></div>
                                         {/* Reps Count */}
                                         <div className="text-white font-mono font-medium flex items-center gap-1">
-                                            <span className="text-[10px] text-slate-500">{w.mode === 'single_hand' ? '1H' : '2H'}</span>
+                                            <span className="text-[10px] text-slate-500">{w.mode === 'single_hand' ? '單手/1H' : '雙手/2H'}</span>
                                             <span className="text-lg">{w.reps}</span>
                                             <span className="text-xs text-slate-500">reps</span>
                                         </div>
