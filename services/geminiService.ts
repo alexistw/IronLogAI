@@ -36,8 +36,8 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
     
     Task:
     1. Briefly analyze volume/consistency.
-    2. One compliment (Strength).
-    3. One improvement tip.
+    2. Up to two compliment (Strength).
+    3. Max two improvement tips.
     
     Constraint: Output in Traditional Chinese (Taiwan). Keep it under 200 words. Be motivating.
   `;
