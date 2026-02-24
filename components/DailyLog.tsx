@@ -73,11 +73,11 @@ export const DailyLog: React.FC<DailyLogProps> = ({
     if (Math.abs(x) <= Math.abs(y) * HORIZONTAL_SWIPE_RATIO) return;
 
     if (x < 0) {
-      handlePrevDay();
+      handleNextDay();
       return;
     }
 
-    handleNextDay();
+    handlePrevDay();
   };
 
   const isToday = isSameDay(currentDate, new Date());

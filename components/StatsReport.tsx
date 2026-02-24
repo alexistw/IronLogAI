@@ -145,13 +145,13 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     if (Math.abs(x) <= Math.abs(y) * HORIZONTAL_SWIPE_RATIO) return;
 
     if (x < 0) {
-      shiftWeek('prev');
+      if (!isViewingCurrentWeek) {
+        shiftWeek('next');
+      }
       return;
     }
 
-    if (!isViewingCurrentWeek) {
-      shiftWeek('next');
-    }
+    shiftWeek('prev');
   };
 
   return (
