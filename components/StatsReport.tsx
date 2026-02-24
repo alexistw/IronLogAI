@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Exercise } from '../types';
 import { getMonday, getWeekId, getExerciseVolumeKg } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
@@ -17,6 +17,10 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchDeltaRef = useRef({ x: 0, y: 0 });
+  const SWIPE_THRESHOLD_PX = 50;
+  const HORIZONTAL_SWIPE_RATIO = 1.2;
 
   // Filter exercises for the selected week
   const weeklyExercises = useMemo(() => {
@@ -112,8 +116,53 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
   const isAfterNoon = now.getHours() >= 12;
   const isViewingCurrentWeek = getWeekId(selectedWeekStart) === getWeekId(now);
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchDeltaRef.current = { x: 0, y: 0 };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchDeltaRef.current = {
+      x: touch.clientX - touchStartRef.current.x,
+      y: touch.clientY - touchStartRef.current.y,
+    };
+  };
+
+  const resetTouch = () => {
+    touchStartRef.current = null;
+    touchDeltaRef.current = { x: 0, y: 0 };
+  };
+
+  const handleTouchEnd = () => {
+    const { x, y } = touchDeltaRef.current;
+    resetTouch();
+
+    if (Math.abs(x) < SWIPE_THRESHOLD_PX) return;
+    if (Math.abs(x) <= Math.abs(y) * HORIZONTAL_SWIPE_RATIO) return;
+
+    if (x < 0) {
+      shiftWeek('prev');
+      return;
+    }
+
+    if (!isViewingCurrentWeek) {
+      shiftWeek('next');
+    }
+  };
+
   return (
-    <div className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full">
+    <div
+      className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={resetTouch}
+      style={{ touchAction: 'pan-y' }}
+    >
       
       {/* Week Navigator */}
       <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50 sticky top-0 z-20 backdrop-blur-md bg-opacity-90 shadow-lg">

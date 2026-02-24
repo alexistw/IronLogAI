@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Exercise } from '../types';
 import { ExerciseCard } from './ExerciseCard';
 import { isSameDay, DAYS_OF_WEEK, getExerciseVolumeKg } from '../utils';
@@ -19,6 +19,10 @@ export const DailyLog: React.FC<DailyLogProps> = ({
   onDeleteExercise,
   onEditExercise
 }) => {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchDeltaRef = useRef({ x: 0, y: 0 });
+  const SWIPE_THRESHOLD_PX = 50;
+  const HORIZONTAL_SWIPE_RATIO = 1.2;
   
   const dailyExercises = useMemo(() => 
     exercises.filter(ex => isSameDay(new Date(ex.date), currentDate)),
@@ -40,10 +44,53 @@ export const DailyLog: React.FC<DailyLogProps> = ({
     onDateChange(newDate);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchDeltaRef.current = { x: 0, y: 0 };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchDeltaRef.current = {
+      x: touch.clientX - touchStartRef.current.x,
+      y: touch.clientY - touchStartRef.current.y,
+    };
+  };
+
+  const resetTouch = () => {
+    touchStartRef.current = null;
+    touchDeltaRef.current = { x: 0, y: 0 };
+  };
+
+  const handleTouchEnd = () => {
+    const { x, y } = touchDeltaRef.current;
+    resetTouch();
+
+    if (Math.abs(x) < SWIPE_THRESHOLD_PX) return;
+    if (Math.abs(x) <= Math.abs(y) * HORIZONTAL_SWIPE_RATIO) return;
+
+    if (x < 0) {
+      handlePrevDay();
+      return;
+    }
+
+    handleNextDay();
+  };
+
   const isToday = isSameDay(currentDate, new Date());
 
   return (
-    <div className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full">
+    <div
+      className="pb-24 pt-4 px-4 max-w-2xl mx-auto w-full"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={resetTouch}
+      style={{ touchAction: 'pan-y' }}
+    >
       {/* Date Header */}
       <div className="flex items-center justify-between mb-6 bg-card p-4 rounded-2xl border border-slate-700/50 shadow-sm sticky top-2 z-10 backdrop-blur-md bg-opacity-90">
         <button onClick={handlePrevDay} className="p-2 text-slate-400 hover:text-white transition-colors">
