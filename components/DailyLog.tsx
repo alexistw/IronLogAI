@@ -121,7 +121,7 @@ export const DailyLog: React.FC<DailyLogProps> = ({
         <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
           <p className="text-slate-400 text-xs">Total Volume 總容量</p>
           <p className="text-2xl font-bold text-secondary">
-            {Math.round(dailyVolumeKg).toLocaleString()} <span className="text-xs text-slate-500 font-normal">kg (總重)</span>
+            {Math.round(dailyVolumeKg).toLocaleString()} <span className="text-xs text-slate-500 font-normal">kg (total總重)</span>
           </p>
         </div>
       </div>

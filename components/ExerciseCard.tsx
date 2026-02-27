@@ -45,7 +45,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
           </div>
           <div className="flex items-center gap-1">
             <Dumbbell size={14} className="text-accent" />
-            <span>{totalWeightKg} kg (總重)</span>
+            <span>{totalWeightKg} kg (total總重)</span>
           </div>
         </div>
       </div>

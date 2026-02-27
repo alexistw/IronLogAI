@@ -81,31 +81,6 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     e.target.select();
   };
 
-  const formatConvertedWeight = (value: number) => {
-    const rounded = Math.round(value * 100) / 100;
-    return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/, '');
-  };
-
-  const convertWeightValuesToUnit = (nextUnit: WeightUnit) => {
-    if (nextUnit === weightUnit) return;
-
-    setRows(prevRows => prevRows.map(row => {
-      if (row.weight.trim() === '') return row;
-
-      const current = Number(row.weight);
-      if (Number.isNaN(current)) return row;
-
-      const converted =
-        nextUnit === 'kg'
-          ? current * LB_TO_KG
-          : current / LB_TO_KG;
-
-      return { ...row, weight: formatConvertedWeight(converted) };
-    }));
-
-    setWeightUnit(nextUnit);
-  };
-
   const normalizeToKgTotal = (weight: number, unit: WeightUnit, mode: WeightMode) => {
     const weightInKg = unit === 'lb' ? weight * LB_TO_KG : weight;
     const totalWeightKg = mode === 'single_hand' ? weightInKg * 2 : weightInKg;
@@ -190,7 +165,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
               <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
                 <button
                   type="button"
-                  onClick={() => convertWeightValuesToUnit('kg')}
+                  onClick={() => setWeightUnit('kg')}
                   className={cn(
                     "rounded-xl py-2 text-sm font-semibold transition-colors",
                     weightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
@@ -200,7 +175,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                 </button>
                 <button
                   type="button"
-                  onClick={() => convertWeightValuesToUnit('lb')}
+                  onClick={() => setWeightUnit('lb')}
                   className={cn(
                     "rounded-xl py-2 text-sm font-semibold transition-colors",
                     weightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
