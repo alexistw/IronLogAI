@@ -211,7 +211,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             <span className="text-xs font-bold uppercase">Total Volume 總容量</span>
           </div>
           <p className="text-3xl font-bold text-white tracking-tight">{Math.round(totalVolume).toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">kg (total總重)</p>
+          <p className="text-xs text-slate-500 mt-1">kg (total 總重)</p>
         </div>
         <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
            <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -252,7 +252,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                                     <div className="flex items-center gap-3 w-full">
                                         {/* Weight Pill */}
                                         <div className="bg-slate-800 border border-slate-700 text-primary font-bold px-3 py-1 rounded-md min-w-[80px] text-center text-sm shadow-sm">
-                                            {w.weightKg} <span className="text-[10px] font-normal text-slate-500">kg (total總重)</span>
+                                            {w.weightKg} <span className="text-[10px] font-normal text-slate-500">kg (total 總重)</span>
                                         </div>
                                         {/* Visual Line Connector */}
                                         <div className="h-[1px] bg-slate-800 flex-1"></div>
