@@ -1,6 +1,7 @@
 import React from 'react';
 import { Exercise } from '../types';
 import { Trash2, Dumbbell, Repeat, Layers, Pencil } from 'lucide-react';
+import { getExerciseEffectiveWeightKg } from '../utils';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -9,7 +10,7 @@ interface ExerciseCardProps {
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit }) => {
-  const weightModeLabel = exercise.weightMode === 'single_hand' ? '單手 / 1H' : '雙手 / 2H';
+  const totalWeightKg = Math.round(getExerciseEffectiveWeightKg(exercise) * 100) / 100;
 
   return (
     <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm group">
@@ -23,7 +24,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
           >
             <Pencil size={18} />
           </button>
-          <button 
+          <button
             onClick={() => onDelete(exercise.id)}
             className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-700/50 rounded-full transition-colors"
             aria-label="Delete exercise"
@@ -36,15 +37,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
         <div className="flex items-center gap-4 text-slate-400 text-sm">
           <div className="flex items-center gap-1">
             <Layers size={14} className="text-primary" />
-            <span>{exercise.sets} Sets 組</span>
+            <span>{exercise.sets} Sets</span>
           </div>
           <div className="flex items-center gap-1">
             <Repeat size={14} className="text-secondary" />
-            <span>{exercise.reps} Reps 次</span>
+            <span>{exercise.reps} Reps</span>
           </div>
           <div className="flex items-center gap-1">
             <Dumbbell size={14} className="text-accent" />
-            <span>{exercise.weight} {exercise.weightUnit} ({weightModeLabel})</span>
+            <span>{totalWeightKg} kg (總重)</span>
           </div>
         </div>
       </div>

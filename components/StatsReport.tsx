@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Exercise } from '../types';
-import { getMonday, getWeekId, getExerciseVolumeKg } from '../utils';
+import { getMonday, getWeekId, getExerciseEffectiveWeightKg, getExerciseVolumeKg } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
@@ -48,11 +48,11 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     return data;
   }, [weeklyExercises]);
 
-  // Statistics Grouped: Exercise -> Weight (with unit/type) -> Total Reps
+  // Statistics Grouped: Exercise -> Total Weight in KG -> Total Reps
   const groupedStats = useMemo(() => {
     const groups: Record<string, {
       totalVolumeKg: number,
-      weights: Record<string, { weight: number; unit: Exercise['weightUnit']; mode: Exercise['weightMode']; reps: number }>
+      weights: Record<string, { weightKg: number; reps: number }>
     }> = {};
 
     weeklyExercises.forEach(ex => {
@@ -63,12 +63,11 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         // Calculate total reps for this specific entry
         const entryReps = ex.sets * ex.reps;
         
-        const weightKey = `${ex.weight}|${ex.weightUnit}|${ex.weightMode}`;
+        const effectiveWeightKg = Math.round(getExerciseEffectiveWeightKg(ex) * 100) / 100;
+        const weightKey = String(effectiveWeightKg);
         if (!groups[ex.name].weights[weightKey]) {
             groups[ex.name].weights[weightKey] = {
-              weight: ex.weight,
-              unit: ex.weightUnit,
-              mode: ex.weightMode,
+              weightKg: effectiveWeightKg,
               reps: 0,
             };
         }
@@ -85,10 +84,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             totalVolumeKg: data.totalVolumeKg,
             weights: Object.entries(data.weights)
                 .map(([, item]) => item)
-                .sort((a, b) => {
-                  if (a.unit !== b.unit) return a.unit.localeCompare(b.unit);
-                  return b.weight - a.weight;
-                })
+                .sort((a, b) => b.weightKg - a.weightKg)
         }))
         .sort((a, b) => b.totalVolumeKg - a.totalVolumeKg);
 
@@ -215,7 +211,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             <span className="text-xs font-bold uppercase">Total Volume 總容量</span>
           </div>
           <p className="text-3xl font-bold text-white tracking-tight">{Math.round(totalVolume).toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">kg-eq lifted (unit normalized)</p>
+          <p className="text-xs text-slate-500 mt-1">kg (總重)</p>
         </div>
         <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
            <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -246,7 +242,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                         {/* Exercise Header */}
                         <div className="flex justify-between items-baseline mb-3">
                             <h4 className="text-lg font-bold text-slate-200">{exercise.name}</h4>
-                            <span className="text-xs text-slate-500 font-mono">Vol: {Math.round(exercise.totalVolumeKg).toLocaleString()}kg-eq</span>
+                            <span className="text-xs text-slate-500 font-mono">Vol: {Math.round(exercise.totalVolumeKg).toLocaleString()} kg</span>
                         </div>
                         
                         {/* Weight Breakdowns */}
@@ -256,15 +252,14 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                                     <div className="flex items-center gap-3 w-full">
                                         {/* Weight Pill */}
                                         <div className="bg-slate-800 border border-slate-700 text-primary font-bold px-3 py-1 rounded-md min-w-[80px] text-center text-sm shadow-sm">
-                                            {w.weight} <span className="text-[10px] font-normal text-slate-500">{w.unit}</span>
+                                            {w.weightKg} <span className="text-[10px] font-normal text-slate-500">kg (總重)</span>
                                         </div>
                                         {/* Visual Line Connector */}
                                         <div className="h-[1px] bg-slate-800 flex-1"></div>
                                         {/* Reps Count */}
                                         <div className="text-white font-mono font-medium flex items-center gap-1">
-                                            <span className="text-[10px] text-slate-500">{w.mode === 'single_hand' ? '單手/1H' : '雙手/2H'}</span>
                                             <span className="text-lg">{w.reps}</span>
-                                            <span className="text-xs text-slate-500">reps</span>
+                                            <span className="text-xs text-slate-500">total reps</span>
                                         </div>
                                     </div>
                                 </div>

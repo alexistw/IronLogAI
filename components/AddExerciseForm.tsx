@@ -106,22 +106,27 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     setWeightUnit(nextUnit);
   };
 
-  const handleToggleWeightUnitConvert = () => {
-    convertWeightValuesToUnit(weightUnit === 'kg' ? 'lb' : 'kg');
+  const normalizeToKgTotal = (weight: number, unit: WeightUnit, mode: WeightMode) => {
+    const weightInKg = unit === 'lb' ? weight * LB_TO_KG : weight;
+    const totalWeightKg = mode === 'single_hand' ? weightInKg * 2 : weightInKg;
+    return Math.round(totalWeightKg * 100) / 100;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
 
-    const dataToAdd = rows.map(row => ({
-      name: name,
-      sets: Number(row.sets) || 1,
-      reps: Number(row.reps) || 0,
-      weight: Number(row.weight) || 0,
-      weightUnit,
-      weightMode,
-    }));
+    const dataToAdd = rows.map(row => {
+      const inputWeight = Number(row.weight) || 0;
+      return {
+        name: name,
+        sets: Number(row.sets) || 1,
+        reps: Number(row.reps) || 0,
+        weight: normalizeToKgTotal(inputWeight, weightUnit, weightMode),
+        weightUnit: 'kg' as const,
+        weightMode: 'double_hand' as const,
+      };
+    });
 
     if (isEditMode && initialExercise && onUpdate) {
       const firstRow = dataToAdd[0];
@@ -204,13 +209,6 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                   lb
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={handleToggleWeightUnitConvert}
-                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900/70 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
-              >
-                Convert to {weightUnit === 'kg' ? 'lb' : 'kg'} 換算成 {weightUnit === 'kg' ? 'lb' : 'kg'}
-              </button>
             </div>
 
             <div>
@@ -236,7 +234,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     weightMode === 'double_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Total 雙手
+                  Total 總重
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 mt-2 ml-1">

@@ -24,15 +24,16 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
   }
 
   // Optimize token usage by summarizing data more compactly
-  const dataSummary = exercises.map(ex => 
-    `${ex.name}: ${ex.sets}x${ex.reps}@${ex.weight}${ex.weightUnit}(${ex.weightMode === 'single_hand' ? 'single-hand' : 'double-hand'}), effective~${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg`
-  ).join(', ');
+  const dataSummary = exercises.map(ex => {
+    const totalReps = ex.sets * ex.reps;
+    return `${ex.name}: ${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg(total) x ${totalReps} reps`;
+  }).join(', ');
 
   const prompt = `
     Role: Fitness Coach.
     Context: Weekly workout log starting ${weekStart}.
     Data: ${dataSummary}
-    Note: "single-hand" means the logged weight is per hand and effective load is converted as both hands combined.
+    Note: All data is normalized as kg total load.
     
     Task:
     1. Briefly analyze volume/consistency.
