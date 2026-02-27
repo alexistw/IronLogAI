@@ -199,7 +199,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     weightMode === 'single_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Per Hand 單手
+                  Per Side 單側
                 </button>
                 <button
                   type="button"
@@ -213,7 +213,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 mt-2 ml-1">
-                Per Hand 單手 = 輸入每手重量（統計會換算為雙手總重量）
+                Per Side 單側 = 輸入每側重量（統計會換算為雙側總重量）
               </p>
             </div>
           </div>
