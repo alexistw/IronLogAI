@@ -25,8 +25,7 @@ export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: s
 
   // Optimize token usage by summarizing data more compactly
   const dataSummary = exercises.map(ex => {
-    const totalReps = ex.sets * ex.reps;
-    return `${ex.name}: ${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg(total) x ${totalReps} reps`;
+    return `${ex.name}: ${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg(total) x ${ex.sets} sets x ${ex.reps} reps`;
   }).join(', ');
 
   const prompt = `
