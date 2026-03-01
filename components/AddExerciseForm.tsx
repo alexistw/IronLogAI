@@ -16,12 +16,14 @@ interface SetRow {
   sets: string;
   reps: string;
   weight: string;
+  weightUnit: WeightUnit;
 }
 
 export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, onClose }) => {
   const isEditMode = !!initialExercise;
   const [name, setName] = useState(initialExercise?.name ?? '');
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialExercise?.weightUnit ?? 'kg');
+  const [barWeight, setBarWeight] = useState('0');
+  const [barWeightUnit, setBarWeightUnit] = useState<WeightUnit>('kg');
   const [weightMode, setWeightMode] = useState<WeightMode>(initialExercise?.weightMode ?? 'double_hand');
   
   // Initialize with one empty row
@@ -31,6 +33,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       sets: initialExercise ? String(initialExercise.sets) : '',
       reps: initialExercise ? String(initialExercise.reps) : '',
       weight: initialExercise ? String(initialExercise.weight) : '',
+      weightUnit: initialExercise?.weightUnit ?? 'kg',
     }
   ]);
 
@@ -46,13 +49,15 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   useEffect(() => {
     if (!initialExercise) return;
     setName(initialExercise.name);
-    setWeightUnit(initialExercise.weightUnit);
+    setBarWeight('0');
+    setBarWeightUnit('kg');
     setWeightMode(initialExercise.weightMode);
     setRows([{
       id: '1',
       sets: String(initialExercise.sets),
       reps: String(initialExercise.reps),
       weight: String(initialExercise.weight),
+      weightUnit: initialExercise.weightUnit,
     }]);
   }, [initialExercise]);
 
@@ -63,6 +68,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       sets: '',
       reps: '',
       weight: '',
+      weightUnit: 'kg',
     };
     setRows([...rows, newRow]);
   };
@@ -81,9 +87,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     e.target.select();
   };
 
-  const normalizeToKgTotal = (weight: number, unit: WeightUnit, mode: WeightMode) => {
-    const weightInKg = unit === 'lb' ? weight * LB_TO_KG : weight;
-    const totalWeightKg = mode === 'single_hand' ? weightInKg * 2 : weightInKg;
+  const normalizeToKgTotal = (plateWeight: number, plateUnit: WeightUnit, mode: WeightMode, unloadedBarWeight: number, unloadedBarUnit: WeightUnit) => {
+    const plateWeightInKg = plateUnit === 'lb' ? plateWeight * LB_TO_KG : plateWeight;
+    const unloadedBarWeightInKg = unloadedBarUnit === 'lb' ? unloadedBarWeight * LB_TO_KG : unloadedBarWeight;
+    const totalPlateWeightKg = mode === 'single_hand' ? plateWeightInKg * 2 : plateWeightInKg;
+    const totalWeightKg = unloadedBarWeightInKg + totalPlateWeightKg;
     return Math.round(totalWeightKg * 100) / 100;
   };
 
@@ -92,12 +100,13 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     if (!name) return;
 
     const dataToAdd = rows.map(row => {
-      const inputWeight = Number(row.weight) || 0;
+      const inputPlateWeight = Number(row.weight) || 0;
+      const inputBarWeight = Number(barWeight) || 0;
       return {
         name: name,
         sets: Number(row.sets) || 1,
         reps: Number(row.reps) || 0,
-        weight: normalizeToKgTotal(inputWeight, weightUnit, weightMode),
+        weight: normalizeToKgTotal(inputPlateWeight, row.weightUnit, weightMode, inputBarWeight, barWeightUnit),
         weightUnit: 'kg' as const,
         weightMode: 'double_hand' as const,
       };
@@ -157,38 +166,49 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             />
           </div>
 
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mb-6 space-y-4">
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
-                Weight Unit 重量單位
+                Unloaded Bar Weight 空槓(器材)重量
               </label>
-              <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
-                <button
-                  type="button"
-                  onClick={() => setWeightUnit('kg')}
-                  className={cn(
-                    "rounded-xl py-2 text-sm font-semibold transition-colors",
-                    weightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
-                  )}
-                >
-                  kg
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeightUnit('lb')}
-                  className={cn(
-                    "rounded-xl py-2 text-sm font-semibold transition-colors",
-                    weightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
-                  )}
-                >
-                  lb
-                </button>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={barWeight}
+                  onChange={(e) => setBarWeight(e.target.value)}
+                  onFocus={handleNumberInputFocus}
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl px-5 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-xl font-medium"
+                  placeholder="0"
+                />
+                <div className="w-[120px] grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
+                  <button
+                    type="button"
+                    onClick={() => setBarWeightUnit('kg')}
+                    className={cn(
+                      "rounded-xl py-2 text-sm font-semibold transition-colors",
+                      barWeightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                    )}
+                  >
+                    kg
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBarWeightUnit('lb')}
+                    className={cn(
+                      "rounded-xl py-2 text-sm font-semibold transition-colors",
+                      barWeightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                    )}
+                  >
+                    lb
+                  </button>
+                </div>
               </div>
             </div>
 
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
-                Weight Type 重量模式
+                Plate Calculation Mode 槓片計算模式
               </label>
               <div className="grid grid-cols-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-1">
                 <button
@@ -199,7 +219,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     weightMode === 'single_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Per Side 單側
+                  Per Side 單邊槓片量
                 </button>
                 <button
                   type="button"
@@ -209,11 +229,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     weightMode === 'double_hand' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                   )}
                 >
-                  Total 總重
+                  Total 槓片總重量
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 mt-2 ml-1">
-                Per Side 單側 = 輸入每側重量（統計會換算為雙側總重量）
+                總重量計算 = 空槓重量 +（單邊槓片量 x 2 或 槓片總重量）
               </p>
             </div>
           </div>
@@ -228,15 +248,15 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
 
             {/* Column Headers (Restored Chinese) */}
             <div className="grid grid-cols-12 gap-3 px-2 mb-2">
-              <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
-              <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Reps 次數</div>
-              <div className="col-span-4 text-center text-[10px] text-slate-500 font-semibold uppercase">Weight 重量</div>
+              <div className="col-span-2 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
+              <div className="col-span-2 text-center text-[10px] text-slate-500 font-semibold uppercase">Reps 次數</div>
+              <div className="col-span-6 text-center text-[10px] text-slate-500 font-semibold uppercase">Weight 槓片重量</div>
               <div className="col-span-2"></div>
             </div>
 
             {rows.map((row, index) => (
               <div key={row.id} className="grid grid-cols-12 gap-3 items-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/30">
-                <div className="col-span-3 relative">
+                <div className="col-span-2 relative">
                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
                      <Layers size={14} />
                    </div>
@@ -250,7 +270,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     placeholder="1"
                   />
                 </div>
-                <div className="col-span-3 relative">
+                <div className="col-span-2 relative">
                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
                      <Repeat size={14} />
                    </div>
@@ -264,19 +284,45 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     placeholder="10"
                   />
                 </div>
-                <div className="col-span-4 relative">
-                   <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
-                     <Dumbbell size={14} />
-                   </div>
-                   <input
-                    type="number"
-                    inputMode="decimal"
-                    value={row.weight}
-                    onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
-                    onFocus={handleNumberInputFocus}
-                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-7 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
-                    placeholder="0"
-                  />
+                <div className="col-span-6">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                        <Dumbbell size={14} />
+                      </div>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={row.weight}
+                        onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
+                        onFocus={handleNumberInputFocus}
+                        className="w-full bg-slate-900 border-none rounded-xl py-3 pl-7 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="w-[90px] grid grid-cols-2 bg-slate-900 border border-slate-700 rounded-xl p-1">
+                      <button
+                        type="button"
+                        onClick={() => handleRowChange(row.id, 'weightUnit', 'kg')}
+                        className={cn(
+                          "rounded-lg py-2 text-xs font-semibold transition-colors",
+                          row.weightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                        )}
+                      >
+                        kg
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRowChange(row.id, 'weightUnit', 'lb')}
+                        className={cn(
+                          "rounded-lg py-2 text-xs font-semibold transition-colors",
+                          row.weightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
+                        )}
+                      >
+                        lb
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="col-span-2 flex justify-end">
                   {rows.length > 1 && !isEditMode ? (
