@@ -245,15 +245,15 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
 
             {/* Column Headers (Restored Chinese) */}
             <div className="grid grid-cols-12 gap-2 px-2 mb-2">
-              <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
+              <div className="col-span-2 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
               <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Reps 次數</div>
-              <div className="col-span-5 pl-1 text-center text-[10px] text-slate-500 font-semibold uppercase">Weight 槓片重量</div>
+              <div className="col-span-6 pl-1 text-center text-[10px] text-slate-500 font-semibold uppercase">Weight 槓片重量</div>
               <div className="col-span-1"></div>
             </div>
 
             {rows.map((row, index) => (
               <div key={row.id} className="grid grid-cols-12 gap-2 items-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/30">
-                <div className="col-span-3 relative">
+                <div className="col-span-2 relative">
                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
                      <Layers size={14} />
                    </div>
@@ -263,7 +263,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     value={row.sets}
                     onChange={(e) => handleRowChange(row.id, 'sets', e.target.value)}
                     onFocus={handleNumberInputFocus}
-                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-6 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
                     placeholder="1"
                   />
                 </div>
@@ -277,12 +277,12 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     value={row.reps}
                     onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
                     onFocus={handleNumberInputFocus}
-                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-6 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
+                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
                     placeholder="10"
                   />
                 </div>
-                <div className="col-span-5 pl-1">
-                  <div className="flex gap-2">
+                <div className="col-span-6 pl-1">
+                  <div className="flex gap-1.5">
                     <div className="relative flex-1">
                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
                         <Dumbbell size={14} />
@@ -293,16 +293,16 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                         value={row.weight}
                         onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
                         onFocus={handleNumberInputFocus}
-                        className="w-full bg-slate-900 border-none rounded-xl py-3 pl-6 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
+                        className="w-full bg-slate-900 border-none rounded-xl py-3 pl-6 pr-2 text-white text-center font-bold text-lg focus:ring-2 focus:ring-primary/50"
                         placeholder="0"
                       />
                     </div>
-                    <div className="w-[90px] grid grid-cols-2 bg-slate-900 border border-slate-700 rounded-xl p-1">
+                    <div className="w-[72px] grid grid-cols-2 bg-slate-900 border border-slate-700 rounded-lg p-0.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleRowChange(row.id, 'weightUnit', 'kg')}
                         className={cn(
-                          "rounded-lg py-2 text-xs font-semibold transition-colors",
+                          "rounded-md py-1.5 text-[10px] font-semibold leading-none transition-colors",
                           row.weightUnit === 'kg' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                         )}
                       >
@@ -312,7 +312,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                         type="button"
                         onClick={() => handleRowChange(row.id, 'weightUnit', 'lb')}
                         className={cn(
-                          "rounded-lg py-2 text-xs font-semibold transition-colors",
+                          "rounded-md py-1.5 text-[10px] font-semibold leading-none transition-colors",
                           row.weightUnit === 'lb' ? "bg-primary text-white" : "text-slate-300 hover:bg-slate-700/70"
                         )}
                       >
