@@ -5,7 +5,19 @@ import { cn, LB_TO_KG } from '../utils';
 import { Exercise, WeightMode, WeightUnit } from '../types';
 
 interface AddExerciseFormProps {
-  onAdd: (exercises: { name: string, sets: number, reps: number, weight: number, weightUnit: WeightUnit, weightMode: WeightMode }[]) => void;
+  onAdd: (exercises: {
+    name: string;
+    sets: number;
+    reps: number;
+    weight: number;
+    weightUnit: WeightUnit;
+    weightMode: WeightMode;
+    plateWeightInput?: number;
+    plateWeightUnitInput?: WeightUnit;
+    plateCalculationMode?: WeightMode;
+    unloadedBarWeight?: number;
+    unloadedBarWeightUnit?: WeightUnit;
+  }[]) => void;
   onUpdate?: (exercise: Exercise) => void;
   initialExercise?: Exercise | null;
   onClose: () => void;
@@ -22,9 +34,15 @@ interface SetRow {
 export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, onClose }) => {
   const isEditMode = !!initialExercise;
   const [name, setName] = useState(initialExercise?.name ?? '');
-  const [barWeight, setBarWeight] = useState('0');
-  const [barWeightUnit, setBarWeightUnit] = useState<WeightUnit>('kg');
-  const [weightMode, setWeightMode] = useState<WeightMode>(initialExercise?.weightMode ?? 'double_hand');
+  const [barWeight, setBarWeight] = useState(
+    initialExercise ? String(initialExercise.unloadedBarWeight ?? 0) : '0'
+  );
+  const [barWeightUnit, setBarWeightUnit] = useState<WeightUnit>(
+    initialExercise?.unloadedBarWeightUnit ?? 'kg'
+  );
+  const [weightMode, setWeightMode] = useState<WeightMode>(
+    initialExercise?.plateCalculationMode ?? initialExercise?.weightMode ?? 'double_hand'
+  );
   
   // Initialize with one empty row
   const [rows, setRows] = useState<SetRow[]>([
@@ -32,8 +50,8 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       id: '1',
       sets: initialExercise ? String(initialExercise.sets) : '',
       reps: initialExercise ? String(initialExercise.reps) : '',
-      weight: initialExercise ? String(initialExercise.weight) : '',
-      weightUnit: initialExercise?.weightUnit ?? 'kg',
+      weight: initialExercise ? String(initialExercise.plateWeightInput ?? initialExercise.weight) : '',
+      weightUnit: initialExercise?.plateWeightUnitInput ?? initialExercise?.weightUnit ?? 'kg',
     }
   ]);
 
@@ -49,15 +67,15 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   useEffect(() => {
     if (!initialExercise) return;
     setName(initialExercise.name);
-    setBarWeight('0');
-    setBarWeightUnit('kg');
-    setWeightMode(initialExercise.weightMode);
+    setBarWeight(String(initialExercise.unloadedBarWeight ?? 0));
+    setBarWeightUnit(initialExercise.unloadedBarWeightUnit ?? 'kg');
+    setWeightMode(initialExercise.plateCalculationMode ?? initialExercise.weightMode);
     setRows([{
       id: '1',
       sets: String(initialExercise.sets),
       reps: String(initialExercise.reps),
-      weight: String(initialExercise.weight),
-      weightUnit: initialExercise.weightUnit,
+      weight: String(initialExercise.plateWeightInput ?? initialExercise.weight),
+      weightUnit: initialExercise.plateWeightUnitInput ?? initialExercise.weightUnit,
     }]);
   }, [initialExercise]);
 
@@ -109,6 +127,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
         weight: normalizeToKgTotal(inputPlateWeight, row.weightUnit, weightMode, inputBarWeight, barWeightUnit),
         weightUnit: 'kg' as const,
         weightMode: 'double_hand' as const,
+        plateWeightInput: inputPlateWeight,
+        plateWeightUnitInput: row.weightUnit,
+        plateCalculationMode: weightMode,
+        unloadedBarWeight: inputBarWeight,
+        unloadedBarWeightUnit: barWeightUnit,
       };
     });
 
@@ -122,6 +145,11 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
         weight: firstRow.weight,
         weightUnit: firstRow.weightUnit,
         weightMode: firstRow.weightMode,
+        plateWeightInput: firstRow.plateWeightInput,
+        plateWeightUnitInput: firstRow.plateWeightUnitInput,
+        plateCalculationMode: firstRow.plateCalculationMode,
+        unloadedBarWeight: firstRow.unloadedBarWeight,
+        unloadedBarWeightUnit: firstRow.unloadedBarWeightUnit,
       });
       onClose();
       return;

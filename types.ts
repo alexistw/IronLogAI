@@ -9,6 +9,12 @@ export interface Exercise {
   weight: number;
   weightUnit: WeightUnit;
   weightMode: WeightMode;
+  // Keep the original form input so edit mode can restore user-entered values.
+  plateWeightInput?: number;
+  plateWeightUnitInput?: WeightUnit;
+  plateCalculationMode?: WeightMode;
+  unloadedBarWeight?: number;
+  unloadedBarWeightUnit?: WeightUnit;
   date: string; // ISO string
   timestamp: number;
 }

@@ -23,7 +23,19 @@ export default function App() {
     setExercises(getExercises());
   }, []);
 
-  const handleAddExercise = (newExercisesData: { name: string, sets: number, reps: number, weight: number, weightUnit: Exercise['weightUnit'], weightMode: Exercise['weightMode'] }[]) => {
+  const handleAddExercise = (newExercisesData: {
+    name: string;
+    sets: number;
+    reps: number;
+    weight: number;
+    weightUnit: Exercise['weightUnit'];
+    weightMode: Exercise['weightMode'];
+    plateWeightInput?: number;
+    plateWeightUnitInput?: Exercise['weightUnit'];
+    plateCalculationMode?: Exercise['weightMode'];
+    unloadedBarWeight?: number;
+    unloadedBarWeightUnit?: Exercise['weightUnit'];
+  }[]) => {
     const timestamp = Date.now();
     const newExercises: Exercise[] = newExercisesData.map((data, index) => ({
       id: generateId() + index, // Ensure unique IDs even if generated in same ms
@@ -33,6 +45,11 @@ export default function App() {
       weight: data.weight,
       weightUnit: data.weightUnit,
       weightMode: data.weightMode,
+      plateWeightInput: data.plateWeightInput,
+      plateWeightUnitInput: data.plateWeightUnitInput,
+      plateCalculationMode: data.plateCalculationMode,
+      unloadedBarWeight: data.unloadedBarWeight,
+      unloadedBarWeightUnit: data.unloadedBarWeightUnit,
       date: currentDate.toISOString(),
       timestamp: timestamp + index,
     }));

@@ -20,6 +20,9 @@ export const getExercises = (): Exercise[] => {
       ...ex,
       weightUnit: normalizeWeightUnit(ex?.weightUnit),
       weightMode: normalizeWeightMode(ex?.weightMode),
+      plateWeightUnitInput: ex?.plateWeightUnitInput ? normalizeWeightUnit(ex.plateWeightUnitInput) : undefined,
+      plateCalculationMode: ex?.plateCalculationMode ? normalizeWeightMode(ex.plateCalculationMode) : undefined,
+      unloadedBarWeightUnit: ex?.unloadedBarWeightUnit ? normalizeWeightUnit(ex.unloadedBarWeightUnit) : undefined,
     }));
   } catch (e) {
     console.error("Failed to parse exercises", e);
