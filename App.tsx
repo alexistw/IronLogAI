@@ -68,6 +68,9 @@ export default function App() {
   };
 
   const handleDeleteExercise = (id: string) => {
+    const confirmed = window.confirm('確定要刪除這筆紀錄嗎？\nAre you sure you want to delete this log?');
+    if (!confirmed) return;
+
     deleteExercise(id);
     setExercises(prev => prev.filter(ex => ex.id !== id));
   };

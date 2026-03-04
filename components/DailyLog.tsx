@@ -39,6 +39,8 @@ export const DailyLog: React.FC<DailyLogProps> = ({
   };
 
   const handleNextDay = () => {
+    if (isSameDay(currentDate, new Date())) return;
+
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + 1);
     onDateChange(newDate);
@@ -107,7 +109,11 @@ export const DailyLog: React.FC<DailyLogProps> = ({
             {isToday ? "Today's Grind 今日訓練" : "Past Log 過去紀錄"}
           </p>
         </div>
-        <button onClick={handleNextDay} className="p-2 text-slate-400 hover:text-white transition-colors">
+        <button
+          onClick={handleNextDay}
+          disabled={isToday}
+          className="p-2 text-slate-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-400"
+        >
           <ChevronRight />
         </button>
       </div>
