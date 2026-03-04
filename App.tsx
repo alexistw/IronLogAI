@@ -257,16 +257,19 @@ export default function App() {
             className="w-full max-w-sm rounded-2xl border border-slate-700 bg-card p-5 shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-white mb-2">刪除紀錄</h3>
+            <h3 className="text-lg font-bold text-white mb-2">
+              刪除紀錄 Delete Log
+            </h3>
             <p className="text-sm text-slate-300 mb-6">
-              確定要刪除這筆 log 嗎？此動作無法復原。
+              確定要刪除這筆 log 嗎？此動作無法復原。<br />
+              Are you sure you want to delete this log? This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2">
               <Button variant="secondary" onClick={handleCancelDelete}>
-                取消
+                取消 Cancel
               </Button>
               <Button variant="danger" onClick={handleConfirmDelete}>
-                確認刪除
+                確認刪除 Delete
               </Button>
             </div>
           </div>
