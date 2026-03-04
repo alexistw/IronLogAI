@@ -16,12 +16,26 @@ export default function App() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [pendingDeleteExerciseId, setPendingDeleteExerciseId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   // Load data on mount
   useEffect(() => {
     setExercises(getExercises());
   }, []);
+
+  useEffect(() => {
+    if (!pendingDeleteExerciseId) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPendingDeleteExerciseId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [pendingDeleteExerciseId]);
 
   const handleAddExercise = (newExercisesData: {
     name: string;
@@ -68,11 +82,19 @@ export default function App() {
   };
 
   const handleDeleteExercise = (id: string) => {
-    const confirmed = window.confirm('確定要刪除這筆紀錄嗎？\nAre you sure you want to delete this log?');
-    if (!confirmed) return;
+    setPendingDeleteExerciseId(id);
+  };
 
-    deleteExercise(id);
-    setExercises(prev => prev.filter(ex => ex.id !== id));
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteExerciseId) return;
+
+    deleteExercise(pendingDeleteExerciseId);
+    setExercises(prev => prev.filter(ex => ex.id !== pendingDeleteExerciseId));
+    setPendingDeleteExerciseId(null);
+  };
+
+  const handleCancelDelete = () => {
+    setPendingDeleteExerciseId(null);
   };
 
   const handleEditExercise = (exercise: Exercise) => {
@@ -224,6 +246,31 @@ export default function App() {
           initialExercise={editingExercise}
           onClose={handleCloseAddModal} 
         />
+      )}
+
+      {pendingDeleteExerciseId && (
+        <div
+          className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-700 bg-card p-5 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-white mb-2">刪除紀錄</h3>
+            <p className="text-sm text-slate-300 mb-6">
+              確定要刪除這筆 log 嗎？此動作無法復原。
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="secondary" onClick={handleCancelDelete}>
+                取消
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDelete}>
+                確認刪除
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
