@@ -92,9 +92,14 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   };
 
   const handleRemoveRow = (id: string) => {
-    if (rows.length > 1) {
-      setRows(rows.filter(r => r.id !== id));
-    }
+    if (rows.length <= 1 || isEditMode) return;
+
+    const shouldDelete = window.confirm(
+      '確定要刪除這組資料嗎？\nAre you sure you want to delete this set row?'
+    );
+
+    if (!shouldDelete) return;
+    setRows(rows.filter(r => r.id !== id));
   };
 
   const handleRowChange = (id: string, field: keyof SetRow, value: string) => {
@@ -365,14 +370,16 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
               </div>
             ))}
 
-            <button 
-              type="button" 
-              onClick={handleAddRow}
-              className="w-full py-4 border border-dashed border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
-            >
-              <Plus size={18} />
-              Add Another Set Group 新增一組
-            </button>
+            {!isEditMode && (
+              <button 
+                type="button" 
+                onClick={handleAddRow}
+                className="w-full py-4 border border-dashed border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Plus size={18} />
+                Add Another Set Group 新增一組
+              </button>
+            )}
           </div>
         </div>
 
