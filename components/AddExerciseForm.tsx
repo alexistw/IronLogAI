@@ -54,15 +54,21 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       weightUnit: initialExercise?.plateWeightUnitInput ?? initialExercise?.weightUnit ?? 'kg',
     }
   ]);
+  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
 
   // Handle ESC key to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (pendingDeleteRowId) {
+        setPendingDeleteRowId(null);
+        return;
+      }
+      onClose();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
+  }, [onClose, pendingDeleteRowId]);
 
   useEffect(() => {
     if (!initialExercise) return;
@@ -91,15 +97,19 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     setRows([...rows, newRow]);
   };
 
+  const handleConfirmRemoveRow = () => {
+    if (!pendingDeleteRowId) return;
+    setRows(prev => prev.filter(r => r.id !== pendingDeleteRowId));
+    setPendingDeleteRowId(null);
+  };
+
+  const handleCancelRemoveRow = () => {
+    setPendingDeleteRowId(null);
+  };
+
   const handleRemoveRow = (id: string) => {
     if (rows.length <= 1 || isEditMode) return;
-
-    const shouldDelete = window.confirm(
-      '確定要刪除這組資料嗎？\nAre you sure you want to delete this set row?'
-    );
-
-    if (!shouldDelete) return;
-    setRows(rows.filter(r => r.id !== id));
+    setPendingDeleteRowId(id);
   };
 
   const handleRowChange = (id: string, field: keyof SetRow, value: string) => {
@@ -390,6 +400,34 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             </Button>
         </div>
       </form>
+
+      {pendingDeleteRowId && (
+        <div
+          className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={handleCancelRemoveRow}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-700 bg-card p-5 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-white mb-2">
+              刪除紀錄 Delete Log
+            </h3>
+            <p className="text-sm text-slate-300 mb-6">
+              確定要刪除這組資料嗎？此動作無法復原。<br />
+              Are you sure you want to delete this set row? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="secondary" onClick={handleCancelRemoveRow}>
+                取消 Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmRemoveRow}>
+                確認刪除 Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
