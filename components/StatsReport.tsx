@@ -24,7 +24,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
 
   const analysisWindow = useMemo(() => {
     const start = new Date(selectedWeekStart);
-    start.setDate(start.getDate() - 14);
+    start.setDate(start.getDate() - (11 * 7));
     start.setHours(0, 0, 0, 0);
 
     const end = new Date(selectedWeekStart);
@@ -41,7 +41,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     };
   }, [exercises, selectedWeekStart]);
 
-  // Filter exercises for the selected week
   const weeklyExercises = useMemo(() => {
     const weekStartMs = selectedWeekStart.getTime();
     const weekEndMs = weekStartMs + (7 * 24 * 60 * 60 * 1000);
@@ -52,7 +51,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
     });
   }, [exercises, selectedWeekStart]);
 
-  // Chart 1: Daily Activity
   const dailyChartData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const data = days.map(day => ({ name: day, sets: 0 }));
@@ -64,10 +62,10 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         data[dayIndex].sets += ex.sets;
       }
     });
+
     return data;
   }, [weeklyExercises]);
 
-  // Statistics Grouped: Exercise -> Total Weight in KG -> Total Reps
   const groupedStats = useMemo(() => {
     const groups: Record<string, {
       totalVolumeKg: number,
@@ -80,15 +78,16 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
       }
 
       const entryReps = ex.sets * ex.reps;
-
       const effectiveWeightKg = Math.round(getExerciseEffectiveWeightKg(ex) * 100) / 100;
       const weightKey = String(effectiveWeightKg);
+
       if (!groups[ex.name].weights[weightKey]) {
         groups[ex.name].weights[weightKey] = {
           weightKg: effectiveWeightKg,
           reps: 0,
         };
       }
+
       groups[ex.name].weights[weightKey].reps += entryReps;
       groups[ex.name].totalVolumeKg += getExerciseVolumeKg(ex);
     });
@@ -178,7 +177,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
       onTouchCancel={resetTouch}
       style={{ touchAction: 'pan-y' }}
     >
-      {/* Week Navigator */}
       <div className="flex items-center justify-between mb-8 bg-card p-2 rounded-xl border border-slate-700/50 sticky top-0 z-20 backdrop-blur-md bg-opacity-90 shadow-lg">
         <button onClick={() => shiftWeek('prev')} className="p-3 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors">
           <CalendarDays size={20} />
@@ -199,7 +197,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </button>
       </div>
 
-      {/* Monday Alert */}
       {isMonday && isViewingCurrentWeek && (
         <div className="mb-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/50 p-4 rounded-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -209,16 +206,13 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
                 {isAfterNoon ? 'Monday Noon Check-in' : 'Monday Start'}
               </h3>
               <p className="text-indigo-300/70 text-sm">
-                {isAfterNoon
-                  ? 'Time to review your stats!'
-                  : 'Ready to crush this week?'}
+                {isAfterNoon ? 'Time to review your stats!' : 'Ready to crush this week?'}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-card p-5 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -244,7 +238,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </div>
       </div>
 
-      {/* Detailed Training Statistics */}
       <div className="bg-card rounded-2xl border border-slate-700/50 mb-8 overflow-hidden shadow-lg">
         <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
           <h3 className="text-white font-bold flex items-center gap-2">
@@ -284,13 +277,12 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
             <div className="p-8 text-center text-slate-500 text-sm">
               No workout data for this week.
               <br />
-              本週沒有訓練資料。
+              這一週還沒有訓練紀錄。
             </div>
           )}
         </div>
       </div>
 
-      {/* Chart 2: Daily Sets Activity */}
       <div className="bg-card p-6 rounded-2xl border border-slate-700/50 mb-8 h-64 shadow-lg">
         <h3 className="text-slate-300 text-sm font-semibold mb-6">Daily Frequency</h3>
         <ResponsiveContainer width="100%" height="100%">
@@ -312,7 +304,6 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* AI Coach Section */}
       <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 relative overflow-hidden transition-all duration-300">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] rounded-full"></div>
 
@@ -358,10 +349,13 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
               <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{aiReport}</p>
             </div>
           ) : analysisWindow.exercises.length === 0 ? (
-            <p className="text-slate-500 text-sm italic">No data available in the last 3 weeks. 近三週沒有可分析的訓練資料。</p>
+            <p className="text-slate-500 text-sm italic">
+              No data available for the recent analysis window. 近期沒有足夠的訓練資料可供分析。
+            </p>
           ) : (
             <p className="text-slate-400 text-sm">
-              Tap &quot;Generate Analysis&quot; for insights based on the last 3 weeks. 點擊「生成分析」查看近三週趨勢與建議。
+              Tap &quot;Generate Analysis&quot; to review your recent 4-week trend and, when available, your 12-week progress
+              check. 點擊「生成分析」查看近 4 週建議，資料足夠時也會附上近 12 週階段檢查。
             </p>
           )}
         </div>
