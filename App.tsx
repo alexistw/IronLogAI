@@ -188,7 +188,7 @@ export default function App() {
       </main>
 
       {/* Floating Action Button for Adding Workout */}
-      {activeTab !== Tab.SETTINGS && (
+      {activeTab === Tab.LOG && (
         <button
             onClick={() => {
               setEditingExercise(null);

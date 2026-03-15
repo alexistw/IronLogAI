@@ -1,67 +1,110 @@
 import { GoogleGenAI } from "@google/genai";
 import { Exercise } from '../types';
-import { getExerciseEffectiveWeightKg } from '../utils';
+import { getExerciseEffectiveWeightKg, getExerciseVolumeKg, getMonday } from '../utils';
 
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    // Strictly follow instructions: access process.env.API_KEY directly.
-    // If the environment is not set up correctly (e.g. Vite without define), this might be undefined.
     const apiKey = process.env.API_KEY;
-    
-    // Debug log to help users verify if their environment variable is being read
     console.log("[IronLog] Initializing Gemini. Key present:", !!apiKey);
-    
     aiClient = new GoogleGenAI({ apiKey: apiKey || '' });
   }
   return aiClient;
 };
 
-export const generateWeeklyAnalysis = async (exercises: Exercise[], weekStart: string): Promise<string> => {
+const formatWeekLabel = (date: Date) =>
+  `${date.toLocaleDateString()} - ${new Date(date.getTime() + 6 * 86400000).toLocaleDateString()}`;
+
+const buildThreeWeekSummary = (exercises: Exercise[]) => {
+  const groupedByWeek = new Map<string, Exercise[]>();
+
+  exercises.forEach(ex => {
+    const weekStart = getMonday(new Date(ex.date));
+    const weekKey = weekStart.toISOString();
+    const current = groupedByWeek.get(weekKey) || [];
+    current.push(ex);
+    groupedByWeek.set(weekKey, current);
+  });
+
+  return Array.from(groupedByWeek.entries())
+    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+    .map(([weekKey, weekExercises]) => {
+      const weekStart = new Date(weekKey);
+      const totalSets = weekExercises.reduce((sum, ex) => sum + ex.sets, 0);
+      const totalVolume = weekExercises.reduce((sum, ex) => sum + getExerciseVolumeKg(ex), 0);
+
+      const movementSummary = weekExercises.reduce<Record<string, { sets: number; reps: number; topWeightKg: number }>>((acc, ex) => {
+        const weightKg = Math.round(getExerciseEffectiveWeightKg(ex) * 10) / 10;
+        if (!acc[ex.name]) {
+          acc[ex.name] = { sets: 0, reps: 0, topWeightKg: 0 };
+        }
+        acc[ex.name].sets += ex.sets;
+        acc[ex.name].reps += ex.sets * ex.reps;
+        acc[ex.name].topWeightKg = Math.max(acc[ex.name].topWeightKg, weightKg);
+        return acc;
+      }, {});
+
+      const movements = Object.entries(movementSummary)
+        .sort((a, b) => b[1].sets - a[1].sets)
+        .map(([name, data]) => `${name}: ${data.sets} sets, ${data.reps} reps, top ${data.topWeightKg}kg`)
+        .join('; ');
+
+      return `Week ${formatWeekLabel(weekStart)} | total sets ${totalSets} | total volume ${Math.round(totalVolume)}kg | movements: ${movements}`;
+    })
+    .join('\n');
+};
+
+export const generateWeeklyAnalysis = async (
+  exercises: Exercise[],
+  focusWeekStart: string,
+  analysisStart: string,
+  analysisEnd: string
+): Promise<string> => {
   if (exercises.length === 0) {
-    return "No workouts recorded this week. Let's crush it next week! 本週無訓練紀錄，下週繼續加油！";
+    return "No workouts recorded in the last 3 weeks. 近三週沒有訓練紀錄，先從穩定安排本週訓練開始。";
   }
 
-  // Optimize token usage by summarizing data more compactly
-  const dataSummary = exercises.map(ex => {
-    return `${ex.name}: ${getExerciseEffectiveWeightKg(ex).toFixed(1)}kg(total) x ${ex.sets} sets x ${ex.reps} reps`;
-  }).join(', ');
+  const dataSummary = buildThreeWeekSummary(exercises);
 
   const prompt = `
-    Role: Fitness Coach.
-    Context: Weekly workout log starting ${weekStart}.
-    Data: ${dataSummary}
-    Note: All data is normalized as kg total load.
-    
+    Role: Fitness coach for a strength training app.
+    Focus week: ${focusWeekStart}
+    Analysis range: ${analysisStart} to ${analysisEnd} (last 3 weeks, including the focus week).
+    All weights are normalized as total kg load.
+
+    Training data by week:
+    ${dataSummary}
+
     Task:
-    1. Briefly analyze volume/consistency.
-    2. Up to two compliment (Strength).
-    3. Max two improvement tips.
-    
-    Constraint: Output in Traditional Chinese (Taiwan). Keep it under 200 words. Be motivating.
+    1. Analyze the recent 3-week trend, but keep the focus on the selected week.
+    2. Point out 1-2 strengths based on consistency, volume, or exercise selection.
+    3. Give 2 specific suggestions for the next week.
+    4. If you notice repeated movement patterns or missing balance, mention them briefly.
+
+    Constraints:
+    - Output in Traditional Chinese (Taiwan).
+    - Keep it under 220 words.
+    - Tone should be motivating, concrete, and practical.
   `;
 
   try {
     const ai = getAiClient();
-    
-    // Using the specifically requested model
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
-    
+
     if (!response || !response.text) {
-        throw new Error("Empty response from Gemini API");
+      throw new Error("Empty response from Gemini API");
     }
 
     return response.text;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    
-    // Provide specific error feedback
+
     if (error.message?.includes("API key") || error.status === 400 || error.status === 403) {
-        return `Configuration Error: API Key issue. (Details: ${error.message || error.status})`;
+      return `Configuration Error: API Key issue. (Details: ${error.message || error.status})`;
     }
 
     return `AI Coach Error: ${error.message || "Unknown error"}. 請稍後再試。`;
