@@ -28,8 +28,12 @@ export interface WeeklySummary {
 }
 
 export interface UserProfile {
+  heightUnit: 'cm' | 'ft_in';
   heightCm: number | null;
-  weightKg: number | null;
+  heightFt: number | null;
+  heightIn: number | null;
+  weightUnit: 'kg' | 'lb';
+  weightValue: number | null;
 }
 
 export enum Tab {

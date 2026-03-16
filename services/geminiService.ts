@@ -33,6 +33,30 @@ type WeekStats = {
 };
 
 const roundOne = (value: number) => Math.round(value * 10) / 10;
+const LB_TO_KG = 0.45359237;
+const INCH_TO_CM = 2.54;
+
+const getProfileHeightText = (profile: UserProfile) => {
+  if (profile.heightUnit === 'ft_in') {
+    const ft = profile.heightFt ?? 0;
+    const inches = profile.heightIn ?? 0;
+    if (ft <= 0 && inches <= 0) return '- Height: not provided';
+    const cm = roundOne((ft * 12 + inches) * INCH_TO_CM);
+    return `- Height: ${ft} ft ${inches} in (~${cm} cm)`;
+  }
+
+  if (!profile.heightCm) return '- Height: not provided';
+  return `- Height: ${profile.heightCm} cm`;
+};
+
+const getProfileWeightText = (profile: UserProfile) => {
+  if (!profile.weightValue) return '- Weight: not provided';
+  if (profile.weightUnit === 'lb') {
+    const kg = roundOne(profile.weightValue * LB_TO_KG);
+    return `- Weight: ${profile.weightValue} lb (~${kg} kg)`;
+  }
+  return `- Weight: ${profile.weightValue} kg`;
+};
 
 const buildWeekStats = (weekKey: string, weekExercises: Exercise[]): WeekStats => {
   const weekStart = new Date(weekKey);
@@ -221,7 +245,7 @@ export const generateWeeklyAnalysis = async (
   userProfile: UserProfile
 ): Promise<string> => {
   if (exercises.length === 0) {
-    return "No workouts recorded in the recent analysis window. 近期沒有可分析的訓練紀錄，先把本週訓練穩定完成就很好。";
+    return "No workouts recorded in the selected analysis window.";
   }
 
   const {
@@ -233,59 +257,49 @@ export const generateWeeklyAnalysis = async (
     twelveWeekTotals,
     twelveWeekMovementInsights,
   } = buildAnalysisSummary(exercises);
-  const bodyInfo = [
-    userProfile.heightCm ? `- 身高: ${userProfile.heightCm} cm` : '- 身高: 未提供',
-    userProfile.weightKg ? `- 體重: ${userProfile.weightKg} kg` : '- 體重: 未提供',
-  ].join('\n');
+
+  const bodyInfo = [getProfileHeightText(userProfile), getProfileWeightText(userProfile)].join('\n');
 
   const prompt = `
-    你是健身紀錄 App 的力量訓練教練。
-    Focus week: ${focusWeekStart}
-    Analysis range: ${analysisStart} to ${analysisEnd}
-    All weights are normalized as total kg load.
+You are a strength training coach for a workout log app.
+Focus week: ${focusWeekStart}
+Analysis range: ${analysisStart} to ${analysisEnd}
+All loads are normalized to total kg.
 
-    User body metrics (current):
-    ${bodyInfo}
+User body metrics (current):
+${bodyInfo}
 
-    Recent 4-week weekly data:
-    ${recentFourWeekSummary}
+Recent 4-week weekly data:
+${recentFourWeekSummary}
 
-    Recent 4-week total trend:
-    ${recentFourWeekTotals}
+Recent 4-week total trend:
+${recentFourWeekTotals}
 
-    Recent 4-week movement trend:
-    ${recentFourWeekMovementInsights}
+Recent 4-week movement trend:
+${recentFourWeekMovementInsights}
 
-    ${hasTwelveWeeks ? `Recent 12-week weekly data:
-    ${twelveWeekSummary}
+${hasTwelveWeeks ? `Recent 12-week weekly data:
+${twelveWeekSummary}
 
-    Recent 12-week volume curve:
-    ${twelveWeekTotals}
+Recent 12-week volume curve:
+${twelveWeekTotals}
 
-    Recent 12-week movement trend:
-    ${twelveWeekMovementInsights}` : '12-week stage review: skip, because available training history is under 12 weeks.'}
+Recent 12-week movement trend:
+${twelveWeekMovementInsights}` : '12-week review: skip, because available training history is under 12 weeks.'}
 
-    請嚴格遵守以下輸出規則：
-    1. 一定先寫「近4週小建議」。
-    2. 近4週小建議請結合資料判斷：
-       - 主要動作重量有沒有進步
-       - 同重量下 reps 有沒有增加
-       - 訓練總量有沒有提升
-       - 疲勞是否可能累積過多
-       - 哪些部位或動作可能停滯
-    3. 如果資料滿 12 週，才加第二段「近12週階段成果檢查」，判斷：
-       - 長期力量曲線
-       - 強弱項是否有明顯變化
-       - 課表架構是否需要大改，或只需小調整
-    4. 如果資料不足 12 週，不要寫任何階段成果檢查，只專注近4週小建議。
-    5. 建議一定要具體可執行，避免空泛鼓勵。
+Please provide:
+1. A concise 4-week trend summary.
+2. Concrete movement-level observations (load, reps at same load, total volume, possible bottlenecks).
+3. If 12 weeks are available, compare early vs late period trend and risks.
+4. If 12 weeks are not available, clearly state this limitation.
+5. Practical next-week action steps.
 
-    Constraints:
-    - Output in Traditional Chinese (Taiwan).
-    - Use short paragraphs or bullet points.
-    - Keep it under 280 words.
-    - Tone should be motivating, concrete, and practical.
-  `;
+Constraints:
+- Output in Traditional Chinese (Taiwan).
+- Use short paragraphs or bullet points.
+- Keep it under 280 words.
+- Tone should be motivating, concrete, and practical.
+`;
 
   try {
     const ai = getAiClient();
@@ -306,6 +320,6 @@ export const generateWeeklyAnalysis = async (
       return `Configuration Error: API Key issue. (Details: ${error.message || error.status})`;
     }
 
-    return `AI Coach Error: ${error.message || "Unknown error"}. 目前無法生成分析，請稍後再試。`;
+    return `AI Coach Error: ${error.message || "Unknown error"}.`;
   }
 };

@@ -43,33 +43,73 @@ export const clearAllData = (): void => {
 export const getUserProfile = (): UserProfile => {
   const stored = localStorage.getItem(USER_PROFILE_KEY);
   if (!stored) {
-    return { heightCm: null, weightKg: null };
+    return {
+      heightUnit: 'cm',
+      heightCm: null,
+      heightFt: null,
+      heightIn: null,
+      weightUnit: 'kg',
+      weightValue: null,
+    };
   }
 
   try {
     const parsed = JSON.parse(stored);
-    const heightCm = typeof parsed?.heightCm === 'number' && Number.isFinite(parsed.heightCm) && parsed.heightCm > 0
-      ? parsed.heightCm
-      : null;
-    const weightKg = typeof parsed?.weightKg === 'number' && Number.isFinite(parsed.weightKg) && parsed.weightKg > 0
-      ? parsed.weightKg
-      : null;
 
-    return { heightCm, weightKg };
+    const normalizePositiveNumber = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+    const normalizeNonNegativeNumber = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+
+    const heightUnit: UserProfile['heightUnit'] = parsed?.heightUnit === 'ft_in' ? 'ft_in' : 'cm';
+    const weightUnit: UserProfile['weightUnit'] = parsed?.weightUnit === 'lb' ? 'lb' : 'kg';
+
+    const legacyHeightCm = normalizePositiveNumber(parsed?.heightCm);
+    const legacyWeightKg = normalizePositiveNumber(parsed?.weightKg);
+
+    const heightCm = normalizePositiveNumber(parsed?.heightCm);
+    const heightFt = normalizePositiveNumber(parsed?.heightFt);
+    const heightInRaw = normalizeNonNegativeNumber(parsed?.heightIn);
+    const heightIn = heightInRaw !== null ? Math.min(heightInRaw, 11) : null;
+    const weightValue = normalizePositiveNumber(parsed?.weightValue);
+
+    return {
+      heightUnit,
+      heightCm: heightCm ?? legacyHeightCm,
+      heightFt,
+      heightIn,
+      weightUnit,
+      weightValue: weightValue ?? legacyWeightKg,
+    };
   } catch (e) {
     console.error("Failed to parse user profile", e);
-    return { heightCm: null, weightKg: null };
+    return {
+      heightUnit: 'cm',
+      heightCm: null,
+      heightFt: null,
+      heightIn: null,
+      weightUnit: 'kg',
+      weightValue: null,
+    };
   }
 };
 
 export const saveUserProfile = (profile: UserProfile): void => {
+  const normalizePositiveNumber = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+  const normalizeNonNegativeNumber = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+
   const normalized: UserProfile = {
-    heightCm: typeof profile.heightCm === 'number' && Number.isFinite(profile.heightCm) && profile.heightCm > 0
-      ? profile.heightCm
-      : null,
-    weightKg: typeof profile.weightKg === 'number' && Number.isFinite(profile.weightKg) && profile.weightKg > 0
-      ? profile.weightKg
-      : null,
+    heightUnit: profile.heightUnit === 'ft_in' ? 'ft_in' : 'cm',
+    heightCm: normalizePositiveNumber(profile.heightCm),
+    heightFt: normalizePositiveNumber(profile.heightFt),
+    heightIn: (() => {
+      const inches = normalizeNonNegativeNumber(profile.heightIn);
+      return inches !== null ? Math.min(inches, 11) : null;
+    })(),
+    weightUnit: profile.weightUnit === 'lb' ? 'lb' : 'kg',
+    weightValue: normalizePositiveNumber(profile.weightValue),
   };
 
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(normalized));

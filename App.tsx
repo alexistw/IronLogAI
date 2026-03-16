@@ -18,7 +18,14 @@ export default function App() {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [pendingDeleteExerciseId, setPendingDeleteExerciseId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [userProfile, setUserProfile] = useState<UserProfile>({ heightCm: null, weightKg: null });
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    heightUnit: 'cm',
+    heightCm: null,
+    heightFt: null,
+    heightIn: null,
+    weightUnit: 'kg',
+    weightValue: null,
+  });
 
   // Load data on mount
   useEffect(() => {
@@ -26,14 +33,38 @@ export default function App() {
     setUserProfile(getUserProfile());
   }, []);
 
-  const handleProfileChange = (field: 'heightCm' | 'weightKg', value: string) => {
+  const handleProfileNumberChange = (
+    field: 'heightCm' | 'heightFt' | 'heightIn' | 'weightValue',
+    value: string
+  ) => {
     const numericValue = value === '' ? null : Number(value);
-    const normalizedValue = typeof numericValue === 'number' && Number.isFinite(numericValue) && numericValue > 0
-      ? numericValue
-      : null;
+    const normalizedValue = (() => {
+      if (typeof numericValue !== 'number' || !Number.isFinite(numericValue)) return null;
+      if (field === 'heightIn') {
+        if (numericValue < 0) return null;
+        return Math.min(numericValue, 11);
+      }
+      return numericValue > 0 ? numericValue : null;
+    })();
 
     setUserProfile(prev => {
       const updated = { ...prev, [field]: normalizedValue };
+      saveUserProfile(updated);
+      return updated;
+    });
+  };
+
+  const handleHeightUnitChange = (heightUnit: UserProfile['heightUnit']) => {
+    setUserProfile(prev => {
+      const updated = { ...prev, heightUnit };
+      saveUserProfile(updated);
+      return updated;
+    });
+  };
+
+  const handleWeightUnitChange = (weightUnit: UserProfile['weightUnit']) => {
+    setUserProfile(prev => {
+      const updated = { ...prev, weightUnit };
       saveUserProfile(updated);
       return updated;
     });
@@ -188,6 +219,21 @@ export default function App() {
 
                 <div className="space-y-4 mb-6 text-left">
                     <div>
+                        <label htmlFor="heightUnit" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                          Height Unit
+                        </label>
+                        <select
+                          id="heightUnit"
+                          value={userProfile.heightUnit}
+                          onChange={(e) => handleHeightUnitChange(e.target.value as UserProfile['heightUnit'])}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                        >
+                          <option value="cm">cm</option>
+                          <option value="ft_in">ft + in</option>
+                        </select>
+                    </div>
+                    {userProfile.heightUnit === 'cm' ? (
+                      <div>
                         <label htmlFor="heightCm" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                           Height (cm)
                         </label>
@@ -197,24 +243,73 @@ export default function App() {
                           min="1"
                           step="0.1"
                           value={userProfile.heightCm ?? ''}
-                          onChange={(e) => handleProfileChange('heightCm', e.target.value)}
+                          onChange={(e) => handleProfileNumberChange('heightCm', e.target.value)}
                           className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
                           placeholder="e.g. 170"
                         />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="heightFt" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                            Height (ft)
+                          </label>
+                          <input
+                            id="heightFt"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={userProfile.heightFt ?? ''}
+                            onChange={(e) => handleProfileNumberChange('heightFt', e.target.value)}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                            placeholder="e.g. 5"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="heightIn" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                            Height (in)
+                          </label>
+                          <input
+                            id="heightIn"
+                            type="number"
+                            min="0"
+                            max="11"
+                            step="1"
+                            value={userProfile.heightIn ?? ''}
+                            onChange={(e) => handleProfileNumberChange('heightIn', e.target.value)}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                            placeholder="e.g. 9"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                        <label htmlFor="weightUnit" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                          Weight Unit
+                        </label>
+                        <select
+                          id="weightUnit"
+                          value={userProfile.weightUnit}
+                          onChange={(e) => handleWeightUnitChange(e.target.value as UserProfile['weightUnit'])}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                        >
+                          <option value="kg">kg</option>
+                          <option value="lb">lb</option>
+                        </select>
                     </div>
                     <div>
-                        <label htmlFor="weightKg" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                          Weight (kg)
+                        <label htmlFor="weightValue" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                          Weight ({userProfile.weightUnit})
                         </label>
                         <input
-                          id="weightKg"
+                          id="weightValue"
                           type="number"
                           min="1"
                           step="0.1"
-                          value={userProfile.weightKg ?? ''}
-                          onChange={(e) => handleProfileChange('weightKg', e.target.value)}
+                          value={userProfile.weightValue ?? ''}
+                          onChange={(e) => handleProfileNumberChange('weightValue', e.target.value)}
                           className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
-                          placeholder="e.g. 70"
+                          placeholder={userProfile.weightUnit === 'kg' ? 'e.g. 70' : 'e.g. 154'}
                         />
                     </div>
                 </div>

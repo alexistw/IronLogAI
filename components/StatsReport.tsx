@@ -5,7 +5,7 @@ import { generateWeeklyAnalysis } from '../services/geminiService';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
-import { Sparkles, BrainCircuit, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Table2 } from 'lucide-react';
+import { Sparkles, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Table2 } from 'lucide-react';
 import { Button } from './Button';
 
 interface StatsReportProps {
@@ -137,6 +137,9 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
   const isMonday = now.getDay() === 1;
   const isAfterNoon = now.getHours() >= 12;
   const isViewingCurrentWeek = getWeekId(selectedWeekStart) === getWeekId(now);
+  const previousWeekDate = new Date(now);
+  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+  const isViewingPreviousWeek = getWeekId(selectedWeekStart) === getWeekId(getMonday(previousWeekDate));
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 1) return;
@@ -317,16 +320,16 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
         </>
       ) : (
         <>
-          {isMonday && isViewingCurrentWeek && (
+          {isMonday && isAfterNoon && isViewingPreviousWeek && (
             <div className="mb-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/50 p-4 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {isAfterNoon ? <Sun className="text-yellow-400" size={24} /> : <BrainCircuit className="text-indigo-400" size={24} />}
+                <Sun className="text-yellow-400" size={24} />
                 <div>
                   <h3 className="text-indigo-200 font-semibold">
-                    {isAfterNoon ? 'Monday Noon Check-in' : 'Monday Start'}
+                    Monday Noon Check-in
                   </h3>
                   <p className="text-indigo-300/70 text-sm">
-                    {isAfterNoon ? 'Time to review your stats!' : 'Ready to crush this week?'}
+                    Time to review last week&apos;s complete stats.
                   </p>
                 </div>
               </div>
