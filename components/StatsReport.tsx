@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Exercise } from '../types';
+import { Exercise, UserProfile } from '../types';
 import { getMonday, getWeekId, getExerciseEffectiveWeightKg, getExerciseVolumeKg } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
 import {
@@ -10,9 +10,10 @@ import { Button } from './Button';
 
 interface StatsReportProps {
   exercises: Exercise[];
+  userProfile: UserProfile;
 }
 
-export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
+export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile }) => {
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(getMonday(new Date()));
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -112,7 +113,8 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises }) => {
       analysisWindow.exercises,
       selectedWeekStart.toLocaleDateString(),
       analysisWindow.start.toLocaleDateString(),
-      new Date(analysisWindow.end.getTime() - 86400000).toLocaleDateString()
+      new Date(analysisWindow.end.getTime() - 86400000).toLocaleDateString(),
+      userProfile
     );
     setAiReport(report);
     setLoading(false);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, Exercise } from './types';
-import { getExercises, saveExercise, deleteExercise } from './services/storageService';
+import { Tab, Exercise, UserProfile } from './types';
+import { getExercises, deleteExercise, getUserProfile, saveUserProfile } from './services/storageService';
 import { DailyLog } from './components/DailyLog';
 import { StatsReport } from './components/StatsReport';
 import { LoginPage } from './components/LoginPage';
@@ -18,11 +18,26 @@ export default function App() {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [pendingDeleteExerciseId, setPendingDeleteExerciseId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [userProfile, setUserProfile] = useState<UserProfile>({ heightCm: null, weightKg: null });
 
   // Load data on mount
   useEffect(() => {
     setExercises(getExercises());
+    setUserProfile(getUserProfile());
   }, []);
+
+  const handleProfileChange = (field: 'heightCm' | 'weightKg', value: string) => {
+    const numericValue = value === '' ? null : Number(value);
+    const normalizedValue = typeof numericValue === 'number' && Number.isFinite(numericValue) && numericValue > 0
+      ? numericValue
+      : null;
+
+    setUserProfile(prev => {
+      const updated = { ...prev, [field]: normalizedValue };
+      saveUserProfile(updated);
+      return updated;
+    });
+  };
 
   useEffect(() => {
     if (!pendingDeleteExerciseId) return;
@@ -159,7 +174,7 @@ export default function App() {
           />
         )}
         {activeTab === Tab.STATS && (
-          <StatsReport exercises={exercises} />
+          <StatsReport exercises={exercises} userProfile={userProfile} />
         )}
         {activeTab === Tab.SETTINGS && (
           <div className="p-6 max-w-md mx-auto pt-12 animate-in slide-in-from-bottom-5 duration-300">
@@ -170,7 +185,40 @@ export default function App() {
                 
                 <h2 className="text-2xl font-bold text-white mb-1">IronLog User</h2>
                 <p className="text-slate-500 text-sm mb-8">Securely logged in</p>
-                
+
+                <div className="space-y-4 mb-6 text-left">
+                    <div>
+                        <label htmlFor="heightCm" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                          Height (cm)
+                        </label>
+                        <input
+                          id="heightCm"
+                          type="number"
+                          min="1"
+                          step="0.1"
+                          value={userProfile.heightCm ?? ''}
+                          onChange={(e) => handleProfileChange('heightCm', e.target.value)}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                          placeholder="e.g. 170"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="weightKg" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                          Weight (kg)
+                        </label>
+                        <input
+                          id="weightKg"
+                          type="number"
+                          min="1"
+                          step="0.1"
+                          value={userProfile.weightKg ?? ''}
+                          onChange={(e) => handleProfileChange('weightKg', e.target.value)}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/70"
+                          placeholder="e.g. 70"
+                        />
+                    </div>
+                </div>
+
                 <div className="space-y-4">
                     <Button variant="danger" size="lg" className="w-full flex items-center justify-center gap-3" onClick={handleLogout}>
                         <LogOut size={20} />

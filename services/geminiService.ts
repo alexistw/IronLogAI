@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { Exercise } from '../types';
+import { Exercise, UserProfile } from '../types';
 import { getExerciseEffectiveWeightKg, getExerciseVolumeKg, getMonday } from '../utils';
 
 let aiClient: GoogleGenAI | null = null;
@@ -217,7 +217,8 @@ export const generateWeeklyAnalysis = async (
   exercises: Exercise[],
   focusWeekStart: string,
   analysisStart: string,
-  analysisEnd: string
+  analysisEnd: string,
+  userProfile: UserProfile
 ): Promise<string> => {
   if (exercises.length === 0) {
     return "No workouts recorded in the recent analysis window. 近期沒有可分析的訓練紀錄，先把本週訓練穩定完成就很好。";
@@ -232,12 +233,19 @@ export const generateWeeklyAnalysis = async (
     twelveWeekTotals,
     twelveWeekMovementInsights,
   } = buildAnalysisSummary(exercises);
+  const bodyInfo = [
+    userProfile.heightCm ? `- 身高: ${userProfile.heightCm} cm` : '- 身高: 未提供',
+    userProfile.weightKg ? `- 體重: ${userProfile.weightKg} kg` : '- 體重: 未提供',
+  ].join('\n');
 
   const prompt = `
     你是健身紀錄 App 的力量訓練教練。
     Focus week: ${focusWeekStart}
     Analysis range: ${analysisStart} to ${analysisEnd}
     All weights are normalized as total kg load.
+
+    User body metrics (current):
+    ${bodyInfo}
 
     Recent 4-week weekly data:
     ${recentFourWeekSummary}

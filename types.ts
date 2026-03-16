@@ -27,6 +27,11 @@ export interface WeeklySummary {
   aiAnalysis?: string;
 }
 
+export interface UserProfile {
+  heightCm: number | null;
+  weightKg: number | null;
+}
+
 export enum Tab {
   LOG = 'LOG',
   STATS = 'STATS',
