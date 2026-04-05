@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Exercise, UserProfile } from '../types';
 import { getMonday, getWeekId, getExerciseEffectiveWeightKg, getExerciseVolumeKg } from '../utils';
 import { generateWeeklyAnalysis } from '../services/geminiService';
+import { getStatsReportState, saveStatsReportState } from '../services/storageService';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
@@ -16,9 +17,20 @@ interface StatsReportProps {
 type ReportPage = 'weekly' | 'ai';
 
 export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile }) => {
-  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(getMonday(new Date()));
-  const [reportPage, setReportPage] = useState<ReportPage>('weekly');
-  const [aiReport, setAiReport] = useState<string | null>(null);
+  const persistedState = useMemo(() => getStatsReportState(), []);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(() => {
+    if (!persistedState.selectedWeekStart) return getMonday(new Date());
+
+    const storedDate = new Date(persistedState.selectedWeekStart);
+    return Number.isNaN(storedDate.getTime()) ? getMonday(new Date()) : getMonday(storedDate);
+  });
+  const [reportPage, setReportPage] = useState<ReportPage>(persistedState.reportPage);
+  const [aiReportsByWeek, setAiReportsByWeek] = useState<Record<string, string>>(() =>
+    persistedState.aiReports.reduce<Record<string, string>>((acc, entry) => {
+      acc[entry.weekId] = entry.report;
+      return acc;
+    }, {})
+  );
   const [loading, setLoading] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -49,6 +61,8 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
     () => new Date(analysisWindow.end.getTime() - 86400000),
     [analysisWindow.end]
   );
+  const selectedWeekId = useMemo(() => getWeekId(selectedWeekStart), [selectedWeekStart]);
+  const aiReport = aiReportsByWeek[selectedWeekId] ?? null;
 
   const weeklyExercises = useMemo(() => {
     const weekStartMs = selectedWeekStart.getTime();
@@ -122,7 +136,10 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
       analysisEndDate.toLocaleDateString(),
       userProfile
     );
-    setAiReport(report);
+    setAiReportsByWeek(prev => ({
+      ...prev,
+      [selectedWeekId]: report,
+    }));
     setLoading(false);
   };
 
@@ -130,8 +147,21 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
     const newDate = new Date(selectedWeekStart);
     newDate.setDate(selectedWeekStart.getDate() + (direction === 'next' ? 7 : -7));
     setSelectedWeekStart(newDate);
-    setAiReport(null);
   };
+
+  useEffect(() => {
+    const aiReports = Object.entries(aiReportsByWeek).map(([weekId, report]) => ({
+      weekId,
+      report,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    saveStatsReportState({
+      selectedWeekStart: selectedWeekStart.toISOString(),
+      reportPage,
+      aiReports,
+    });
+  }, [aiReportsByWeek, reportPage, selectedWeekStart]);
 
   const now = new Date();
   const isMonday = now.getDay() === 1;
@@ -354,14 +384,14 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
                   <Info size={16} />
                 </button>
               </div>
-              {!aiReport && analysisWindow.exercises.length > 0 && (
+              {analysisWindow.exercises.length > 0 && (
                 <Button
                   size="sm"
                   onClick={handleGenerateReport}
                   disabled={loading}
                   className="bg-indigo-600 hover:bg-indigo-700 text-xs px-3 shadow-indigo-500/20"
                 >
-                  {loading ? <Loader2 className="animate-spin" size={14} /> : 'Generate Analysis'}
+                  {loading ? <Loader2 className="animate-spin" size={14} /> : aiReport ? 'Regenerate Analysis' : 'Generate Analysis'}
                 </Button>
               )}
             </div>

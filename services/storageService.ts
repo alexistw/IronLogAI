@@ -3,6 +3,19 @@ import { normalizeWeightMode, normalizeWeightUnit } from '../utils';
 
 const STORAGE_KEY = 'ironlog_exercises';
 const USER_PROFILE_KEY = 'ironlog_user_profile';
+const STATS_REPORT_STATE_KEY = 'ironlog_stats_report_state';
+
+export type StoredStatsReportEntry = {
+  weekId: string;
+  report: string;
+  updatedAt: string;
+};
+
+export type StoredStatsReportState = {
+  selectedWeekStart: string | null;
+  reportPage: 'weekly' | 'ai';
+  aiReports: StoredStatsReportEntry[];
+};
 
 export const saveExercise = (exercise: Exercise): void => {
   const exercises = getExercises();
@@ -113,4 +126,45 @@ export const saveUserProfile = (profile: UserProfile): void => {
   };
 
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(normalized));
+};
+
+export const getStatsReportState = (): StoredStatsReportState => {
+  const stored = localStorage.getItem(STATS_REPORT_STATE_KEY);
+  if (!stored) {
+    return {
+      selectedWeekStart: null,
+      reportPage: 'weekly',
+      aiReports: [],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    const aiReports = Array.isArray(parsed?.aiReports)
+      ? parsed.aiReports
+          .filter((entry: any) => typeof entry?.weekId === 'string' && typeof entry?.report === 'string')
+          .map((entry: any) => ({
+            weekId: entry.weekId,
+            report: entry.report,
+            updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : new Date().toISOString(),
+          }))
+      : [];
+
+    return {
+      selectedWeekStart: typeof parsed?.selectedWeekStart === 'string' ? parsed.selectedWeekStart : null,
+      reportPage: parsed?.reportPage === 'ai' ? 'ai' : 'weekly',
+      aiReports,
+    };
+  } catch (e) {
+    console.error("Failed to parse stats report state", e);
+    return {
+      selectedWeekStart: null,
+      reportPage: 'weekly',
+      aiReports: [],
+    };
+  }
+};
+
+export const saveStatsReportState = (state: StoredStatsReportState): void => {
+  localStorage.setItem(STATS_REPORT_STATE_KEY, JSON.stringify(state));
 };
