@@ -148,9 +148,42 @@ export default function App() {
     setIsAddModalOpen(true);
   };
 
-  const handleUpdateExercise = (updatedExercise: Exercise) => {
+  const handleUpdateExercise = (updatedExercise: Exercise, additionalExercisesData: {
+    name: string;
+    sets: number;
+    reps: number;
+    weight: number;
+    weightUnit: Exercise['weightUnit'];
+    weightMode: Exercise['weightMode'];
+    plateWeightInput?: number;
+    plateWeightUnitInput?: Exercise['weightUnit'];
+    plateCalculationMode?: Exercise['weightMode'];
+    unloadedBarWeight?: number;
+    unloadedBarWeightUnit?: Exercise['weightUnit'];
+  }[] = []) => {
+    const timestamp = Date.now();
+    const additionalExercises: Exercise[] = additionalExercisesData.map((data, index) => ({
+      id: generateId() + index,
+      name: data.name,
+      sets: data.sets,
+      reps: data.reps,
+      weight: data.weight,
+      weightUnit: data.weightUnit,
+      weightMode: data.weightMode,
+      plateWeightInput: data.plateWeightInput,
+      plateWeightUnitInput: data.plateWeightUnitInput,
+      plateCalculationMode: data.plateCalculationMode,
+      unloadedBarWeight: data.unloadedBarWeight,
+      unloadedBarWeightUnit: data.unloadedBarWeightUnit,
+      date: updatedExercise.date,
+      timestamp: timestamp + index,
+    }));
+
     setExercises(prev => {
-      const updated = prev.map(ex => ex.id === updatedExercise.id ? updatedExercise : ex);
+      const updated = [
+        ...prev.map(ex => ex.id === updatedExercise.id ? updatedExercise : ex),
+        ...additionalExercises,
+      ];
       localStorage.setItem('ironlog_exercises', JSON.stringify(updated));
       return updated;
     });

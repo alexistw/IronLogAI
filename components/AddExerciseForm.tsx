@@ -4,21 +4,23 @@ import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronLeft } from 'lucide-r
 import { cn, LB_TO_KG } from '../utils';
 import { Exercise, WeightMode, WeightUnit } from '../types';
 
+interface ExerciseFormData {
+  name: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  weightUnit: WeightUnit;
+  weightMode: WeightMode;
+  plateWeightInput?: number;
+  plateWeightUnitInput?: WeightUnit;
+  plateCalculationMode?: WeightMode;
+  unloadedBarWeight?: number;
+  unloadedBarWeightUnit?: WeightUnit;
+}
+
 interface AddExerciseFormProps {
-  onAdd: (exercises: {
-    name: string;
-    sets: number;
-    reps: number;
-    weight: number;
-    weightUnit: WeightUnit;
-    weightMode: WeightMode;
-    plateWeightInput?: number;
-    plateWeightUnitInput?: WeightUnit;
-    plateCalculationMode?: WeightMode;
-    unloadedBarWeight?: number;
-    unloadedBarWeightUnit?: WeightUnit;
-  }[]) => void;
-  onUpdate?: (exercise: Exercise) => void;
+  onAdd: (exercises: ExerciseFormData[]) => void;
+  onUpdate?: (exercise: Exercise, additionalExercises?: ExerciseFormData[]) => void;
   initialExercise?: Exercise | null;
   onClose: () => void;
 }
@@ -86,7 +88,6 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   }, [initialExercise]);
 
   const handleAddRow = () => {
-    if (isEditMode) return;
     const newRow: SetRow = {
       id: Math.random().toString(36).substr(2, 9),
       sets: '',
@@ -108,7 +109,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   };
 
   const handleRemoveRow = (id: string) => {
-    if (rows.length <= 1 || isEditMode) return;
+    if (rows.length <= 1) return;
     setPendingDeleteRowId(id);
   };
 
@@ -152,6 +153,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
 
     if (isEditMode && initialExercise && onUpdate) {
       const firstRow = dataToAdd[0];
+      const additionalRows = dataToAdd.slice(1);
       onUpdate({
         ...initialExercise,
         name: firstRow.name,
@@ -165,7 +167,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
         plateCalculationMode: firstRow.plateCalculationMode,
         unloadedBarWeight: firstRow.unloadedBarWeight,
         unloadedBarWeightUnit: firstRow.unloadedBarWeightUnit,
-      });
+      }, additionalRows);
       onClose();
       return;
     }
@@ -365,7 +367,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                   </div>
                 </div>
                 <div className="col-span-1 flex justify-end">
-                  {rows.length > 1 && !isEditMode ? (
+                  {rows.length > 1 && (!isEditMode || index > 0) ? (
                     <button 
                       type="button" 
                       onClick={() => handleRemoveRow(row.id)}
@@ -380,8 +382,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
               </div>
             ))}
 
-            {!isEditMode && (
-              <button 
+            <button 
                 type="button" 
                 onClick={handleAddRow}
                 className="w-full py-4 border border-dashed border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
@@ -389,7 +390,6 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                 <Plus size={18} />
                 Add Another Set Group 新增一組
               </button>
-            )}
           </div>
         </div>
 
