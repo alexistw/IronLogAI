@@ -3,6 +3,7 @@ import { Exercise, UserProfile } from '../types';
 import { getExerciseEffectiveWeightKg, getExerciseVolumeKg, getMonday } from '../utils';
 
 let aiClient: GoogleGenAI | null = null;
+const AI_COACH_MODEL = 'gemini-3.5-flash';
 
 const getAiClient = () => {
   if (!aiClient) {
@@ -304,7 +305,7 @@ Constraints:
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: AI_COACH_MODEL,
       contents: prompt,
     });
 
