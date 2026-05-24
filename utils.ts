@@ -57,3 +57,35 @@ export const getExerciseEffectiveWeightKg = (exercise: Pick<Exercise, 'weight' |
 export const getExerciseVolumeKg = (exercise: Pick<Exercise, 'weight' | 'weightUnit' | 'weightMode' | 'sets' | 'reps'>): number => {
   return getExerciseEffectiveWeightKg(exercise) * exercise.sets * exercise.reps;
 };
+
+// Returns the heaviest effective weight (kg) from the most recent previous session
+// with the same exercise name, along with that session's date.
+export const getPreviousBestWeightKg = (
+  exerciseName: string,
+  currentDate: string,
+  allExercises: Exercise[]
+): { weightKg: number; date: string } | null => {
+  const normalizedName = exerciseName.trim().toLowerCase();
+  const currentDay = currentDate.split('T')[0];
+
+  const previousSessions = allExercises.filter(
+    ex => ex.name.trim().toLowerCase() === normalizedName && ex.date.split('T')[0] < currentDay
+  );
+
+  if (previousSessions.length === 0) return null;
+
+  // Find most recent day
+  const mostRecentDay = previousSessions.reduce(
+    (latest, ex) => (ex.date.split('T')[0] > latest ? ex.date.split('T')[0] : latest),
+    previousSessions[0].date.split('T')[0]
+  );
+
+  // Among that day's entries, find the heaviest
+  const heaviestWeightKg = previousSessions
+    .filter(ex => ex.date.split('T')[0] === mostRecentDay)
+    .reduce((max, ex) => Math.max(max, getExerciseEffectiveWeightKg(ex)), 0);
+
+  if (heaviestWeightKg === 0) return null;
+
+  return { weightKg: Math.round(heaviestWeightKg * 100) / 100, date: mostRecentDay };
+};

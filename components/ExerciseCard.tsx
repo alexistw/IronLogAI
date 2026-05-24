@@ -1,16 +1,23 @@
 import React from 'react';
 import { Exercise } from '../types';
-import { Trash2, Dumbbell, Repeat, Layers, Pencil } from 'lucide-react';
-import { getExerciseEffectiveWeightKg } from '../utils';
+import { Trash2, Dumbbell, Repeat, Layers, Pencil, TrendingUp } from 'lucide-react';
+import { getExerciseEffectiveWeightKg, getPreviousBestWeightKg } from '../utils';
 
 interface ExerciseCardProps {
   exercise: Exercise;
+  allExercises: Exercise[];
   onDelete: (id: string) => void;
   onEdit: (exercise: Exercise) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit }) => {
+export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, allExercises, onDelete, onEdit }) => {
   const totalWeightKg = Math.round(getExerciseEffectiveWeightKg(exercise) * 100) / 100;
+  const previousBest = getPreviousBestWeightKg(exercise.name, exercise.date, allExercises);
+
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm group">
@@ -48,6 +55,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, 
             <span>{totalWeightKg} kg (total 總重)</span>
           </div>
         </div>
+        {previousBest && (
+          <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
+            <TrendingUp size={12} className="text-slate-600 shrink-0" />
+            <span>
+              上次最重 Prev best: <span className="text-slate-400 font-medium">{previousBest.weightKg} kg</span>
+              <span className="ml-1">({formatShortDate(previousBest.date)})</span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
