@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Exercise } from '../types';
 import { ExerciseCard } from './ExerciseCard';
-import { isSameDay, DAYS_OF_WEEK, getExerciseVolumeKg } from '../utils';
+import { isSameDay, DAYS_OF_WEEK, getExerciseVolumeKg, buildPreviousBestMap } from '../utils';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 interface DailyLogProps {
@@ -24,8 +24,12 @@ export const DailyLog: React.FC<DailyLogProps> = ({
   const SWIPE_THRESHOLD_PX = 50;
   const HORIZONTAL_SWIPE_RATIO = 1.2;
   
-  const dailyExercises = useMemo(() => 
+  const dailyExercises = useMemo(() =>
     exercises.filter(ex => isSameDay(new Date(ex.date), currentDate)),
+  [exercises, currentDate]);
+
+  const previousBestMap = useMemo(() =>
+    buildPreviousBestMap(exercises, currentDate.toISOString().split('T')[0]),
   [exercises, currentDate]);
   const dailyVolumeKg = useMemo(
     () => dailyExercises.reduce((acc, curr) => acc + getExerciseVolumeKg(curr), 0),
@@ -136,7 +140,13 @@ export const DailyLog: React.FC<DailyLogProps> = ({
       <div className="space-y-1">
         {dailyExercises.length > 0 ? (
           dailyExercises.map(ex => (
-            <ExerciseCard key={ex.id} exercise={ex} allExercises={exercises} onDelete={onDeleteExercise} onEdit={onEditExercise} />
+            <ExerciseCard
+              key={ex.id}
+              exercise={ex}
+              previousBest={previousBestMap.get(ex.name.trim().toLowerCase()) ?? null}
+              onDelete={onDeleteExercise}
+              onEdit={onEditExercise}
+            />
           ))
         ) : (
           <div className="text-center py-12 flex flex-col items-center justify-center opacity-50">

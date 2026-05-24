@@ -58,34 +58,33 @@ export const getExerciseVolumeKg = (exercise: Pick<Exercise, 'weight' | 'weightU
   return getExerciseEffectiveWeightKg(exercise) * exercise.sets * exercise.reps;
 };
 
-// Returns the heaviest effective weight (kg) from the most recent previous session
-// with the same exercise name, along with that session's date.
-export const getPreviousBestWeightKg = (
-  exerciseName: string,
-  currentDate: string,
-  allExercises: Exercise[]
-): { weightKg: number; date: string } | null => {
-  const normalizedName = exerciseName.trim().toLowerCase();
-  const currentDay = currentDate.split('T')[0];
+// Builds a map of exercise name → { weightKg, date } for the heaviest lift
+// from the most recent session before currentDay. O(n log n) once; O(1) per lookup.
+export const buildPreviousBestMap = (
+  exercises: Exercise[],
+  currentDay: string // YYYY-MM-DD
+): Map<string, { weightKg: number; date: string }> => {
+  const map = new Map<string, { weightKg: number; date: string }>();
 
-  const previousSessions = allExercises.filter(
-    ex => ex.name.trim().toLowerCase() === normalizedName && ex.date.split('T')[0] < currentDay
-  );
+  // Sort descending by date so the first entry per name we encounter is the most recent.
+  const sorted = exercises
+    .filter(ex => ex.date.split('T')[0] < currentDay)
+    .sort((a, b) => b.date.localeCompare(a.date));
 
-  if (previousSessions.length === 0) return null;
+  for (const ex of sorted) {
+    const name = ex.name.trim().toLowerCase();
+    const day = ex.date.split('T')[0];
+    const existing = map.get(name);
 
-  // Find most recent day
-  const mostRecentDay = previousSessions.reduce(
-    (latest, ex) => (ex.date.split('T')[0] > latest ? ex.date.split('T')[0] : latest),
-    previousSessions[0].date.split('T')[0]
-  );
+    if (!existing) {
+      map.set(name, { weightKg: Math.round(getExerciseEffectiveWeightKg(ex) * 100) / 100, date: day });
+    } else if (existing.date === day) {
+      // Same most-recent day — keep the heaviest weight.
+      const w = Math.round(getExerciseEffectiveWeightKg(ex) * 100) / 100;
+      if (w > existing.weightKg) map.set(name, { weightKg: w, date: day });
+    }
+    // Earlier day for a name already in the map — skip.
+  }
 
-  // Among that day's entries, find the heaviest
-  const heaviestWeightKg = previousSessions
-    .filter(ex => ex.date.split('T')[0] === mostRecentDay)
-    .reduce((max, ex) => Math.max(max, getExerciseEffectiveWeightKg(ex)), 0);
-
-  if (heaviestWeightKg === 0) return null;
-
-  return { weightKg: Math.round(heaviestWeightKg * 100) / 100, date: mostRecentDay };
+  return map;
 };

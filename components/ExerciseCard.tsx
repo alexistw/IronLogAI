@@ -1,18 +1,17 @@
 import React from 'react';
 import { Exercise } from '../types';
 import { Trash2, Dumbbell, Repeat, Layers, Pencil, TrendingUp } from 'lucide-react';
-import { getExerciseEffectiveWeightKg, getPreviousBestWeightKg } from '../utils';
+import { getExerciseEffectiveWeightKg } from '../utils';
 
 interface ExerciseCardProps {
   exercise: Exercise;
-  allExercises: Exercise[];
+  previousBest: { weightKg: number; date: string } | null;
   onDelete: (id: string) => void;
   onEdit: (exercise: Exercise) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, allExercises, onDelete, onEdit }) => {
+export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, previousBest, onDelete, onEdit }) => {
   const totalWeightKg = Math.round(getExerciseEffectiveWeightKg(exercise) * 100) / 100;
-  const previousBest = getPreviousBestWeightKg(exercise.name, exercise.date, allExercises);
 
   const formatShortDate = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
