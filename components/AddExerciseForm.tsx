@@ -430,10 +430,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                     return (
                       <div className="mb-1 text-center text-xs text-slate-500">
                         {bodyWeightKg !== null ? (
-                          <>{bodyweightMode === 'bw_plus' ? `${Math.round(bw * 10) / 10} + ` : `${Math.round(bw * 10) / 10} − `}
-                            <span className={bodyweightMode === 'bw_plus' ? 'text-blue-400 font-medium' : 'text-amber-400 font-medium'}>
-                              {effective} kg
-                            </span>{' '}effective</>
+                          <>有效總重 Effective: <span className={bodyweightMode === 'bw_plus' ? 'text-blue-400 font-medium' : 'text-amber-400 font-medium'}>{effective} kg</span></>
                         ) : (
                           <span className="text-red-400/70">set body weight first</span>
                         )}
