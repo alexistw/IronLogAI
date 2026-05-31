@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tab, Exercise, UserProfile } from './types';
-import { getExercises, deleteExercise, getUserProfile, saveUserProfile } from './services/storageService';
+import { getExercises, deleteExercise, getUserProfile, saveUserProfile, migrateAssistPullUpsToBwMinus } from './services/storageService';
 import { DailyLog } from './components/DailyLog';
 import { StatsReport } from './components/StatsReport';
 import { LoginPage } from './components/LoginPage';
@@ -29,6 +29,7 @@ export default function App() {
 
   // Load data on mount
   useEffect(() => {
+    migrateAssistPullUpsToBwMinus();
     setExercises(getExercises());
     setUserProfile(getUserProfile());
   }, []);

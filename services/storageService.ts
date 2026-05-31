@@ -1,5 +1,5 @@
 import { Exercise, UserProfile } from '../types';
-import { normalizeWeightMode, normalizeWeightUnit } from '../utils';
+import { normalizeWeightMode, normalizeWeightUnit, getExerciseEffectiveWeightKg, LB_TO_KG } from '../utils';
 
 const STORAGE_KEY = 'ironlog_exercises';
 const USER_PROFILE_KEY = 'ironlog_user_profile';
@@ -47,6 +47,42 @@ export const getExercises = (): Exercise[] => {
 export const deleteExercise = (id: string): void => {
   const exercises = getExercises().filter(ex => ex.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(exercises));
+};
+
+// One-time migration: tag pull-up related exercises logged before BW mode existed
+// and recompute weight as (bodyWeight - assistanceKg).
+export const migrateAssistPullUpsToBwMinus = (): void => {
+  const exercises = getExercises();
+  const profile = getUserProfile();
+  const bodyWeightKg = profile.weightValue !== null
+    ? (profile.weightUnit === 'lb' ? profile.weightValue * LB_TO_KG : profile.weightValue)
+    : null;
+
+  const PULLUP_PATTERN = /引體向上/;
+  let changed = false;
+  const migrated = exercises.map(ex => {
+    const needsMigration = !ex.bodyweightMode || (ex.bodyweightMode === 'bw_minus' && ex.assistanceWeight === undefined);
+    if (!PULLUP_PATTERN.test(ex.name) || !needsMigration) return ex;
+    changed = true;
+    const assistanceKg = Math.round(getExerciseEffectiveWeightKg(ex) * 100) / 100;
+    const effectiveKg = bodyWeightKg !== null
+      ? Math.max(0, Math.round((bodyWeightKg - assistanceKg) * 100) / 100)
+      : assistanceKg;
+    return {
+      ...ex,
+      weight: effectiveKg,
+      weightUnit: 'kg' as const,
+      weightMode: 'double_hand' as const,
+      bodyweightMode: 'bw_minus' as const,
+      assisted: true,
+      assistanceWeight: assistanceKg,
+      assistanceWeightInput: assistanceKg,
+      assistanceWeightUnitInput: 'kg' as const,
+    };
+  });
+  if (changed) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+  }
 };
 
 export const clearAllData = (): void => {
