@@ -41,7 +41,9 @@ interface SetRow {
 export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, userProfile, onClose }) => {
   const isEditMode = !!initialExercise;
   const [name, setName] = useState(initialExercise?.name ?? '');
-  const [isAssisted, setIsAssisted] = useState(initialExercise?.assisted ?? false);
+  const [bodyweightMode, setBodyweightMode] = useState<'normal' | 'bw_plus' | 'bw_minus'>(
+    initialExercise?.bodyweightMode ?? (initialExercise?.assisted ? 'bw_minus' : 'normal')
+  );
   const [barWeight, setBarWeight] = useState(
     initialExercise ? String(initialExercise.unloadedBarWeight ?? 0) : '0'
   );
@@ -91,7 +93,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   useEffect(() => {
     if (!initialExercise) return;
     setName(initialExercise.name);
-    setIsAssisted(initialExercise.assisted ?? false);
+    setBodyweightMode(initialExercise.bodyweightMode ?? (initialExercise.assisted ? 'bw_minus' : 'normal'));
     setBarWeight(String(initialExercise.unloadedBarWeight ?? 0));
     setBarWeightUnit(initialExercise.unloadedBarWeightUnit ?? 'kg');
     setWeightMode(initialExercise.plateCalculationMode ?? initialExercise.weightMode);
@@ -158,9 +160,12 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       const inputWeight = Number(row.weight) || 0;
       const inputBarWeight = Number(barWeight) || 0;
 
-      if (isAssisted) {
-        const assistKg = row.weightUnit === 'lb' ? inputWeight * LB_TO_KG : inputWeight;
-        const effectiveKg = Math.max(0, Math.round(((bodyWeightKg ?? 0) - assistKg) * 100) / 100);
+      if (bodyweightMode !== 'normal') {
+        const addedKg = row.weightUnit === 'lb' ? inputWeight * LB_TO_KG : inputWeight;
+        const bw = bodyWeightKg ?? 0;
+        const effectiveKg = bodyweightMode === 'bw_plus'
+          ? Math.round((bw + addedKg) * 100) / 100
+          : Math.max(0, Math.round((bw - addedKg) * 100) / 100);
         return {
           name,
           sets: Number(row.sets) || 1,
@@ -168,8 +173,9 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
           weight: effectiveKg,
           weightUnit: 'kg' as const,
           weightMode: 'double_hand' as const,
-          assisted: true,
-          assistanceWeight: Math.round(assistKg * 100) / 100,
+          bodyweightMode,
+          assisted: bodyweightMode === 'bw_minus',
+          assistanceWeight: Math.round(addedKg * 100) / 100,
           assistanceWeightInput: inputWeight,
           assistanceWeightUnitInput: row.weightUnit,
         };
@@ -250,28 +256,36 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             />
           </div>
 
-          {/* Assisted Machine Toggle */}
+          {/* Bodyweight Mode Toggle */}
           <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => setIsAssisted(prev => !prev)}
-              className={cn(
-                "w-full flex items-center justify-between px-5 py-4 rounded-2xl border font-semibold text-sm transition-all",
-                isAssisted
-                  ? "bg-amber-500/15 border-amber-500/50 text-amber-400"
-                  : "bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-300"
-              )}
-            >
-              <span>輔助器材模式 Assisted Machine</span>
-              <span className={cn(
-                "text-xs px-2 py-0.5 rounded-full font-bold",
-                isAssisted ? "bg-amber-500/20 text-amber-300" : "bg-slate-700 text-slate-500"
-              )}>
-                {isAssisted ? 'ON' : 'OFF'}
-              </span>
-            </button>
+            <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
+              Bodyweight Mode 體重計算模式
+            </label>
+            <div className="grid grid-cols-3 bg-slate-800/60 border border-slate-700 rounded-2xl p-1 gap-1">
+              {([
+                { value: 'normal', label: 'Normal 一般' },
+                { value: 'bw_plus', label: 'BW+ 加掛' },
+                { value: 'bw_minus', label: 'BW− 輔助' },
+              ] as const).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setBodyweightMode(value)}
+                  className={cn(
+                    "rounded-xl py-2 text-xs font-semibold transition-colors",
+                    bodyweightMode === value
+                      ? value === 'bw_plus' ? "bg-blue-500 text-white"
+                        : value === 'bw_minus' ? "bg-amber-500 text-white"
+                        : "bg-primary text-white"
+                      : "text-slate-300 hover:bg-slate-700/70"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-            {isAssisted && (
+            {bodyweightMode !== 'normal' && (
               <div className={cn(
                 "mt-2 px-4 py-3 rounded-xl text-sm",
                 bodyWeightKg !== null
@@ -285,7 +299,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             )}
           </div>
 
-          <div className={cn("mb-6 space-y-4", isAssisted && "hidden")}>
+          <div className={cn("mb-6 space-y-4", bodyweightMode !== 'normal' && "hidden")}>
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
                 Unloaded Bar Weight 空槓(器材)重量
@@ -367,53 +381,65 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
               <div className="col-span-2 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
               <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Reps 次數</div>
               <div className="col-span-6 pl-1 text-center text-[10px] text-slate-500 font-semibold uppercase">
-                {isAssisted ? 'Assistance 輔助重量' : 'Weight 槓片重量'}
+                {bodyweightMode === 'bw_plus' ? 'Added 外掛重量' : bodyweightMode === 'bw_minus' ? 'Assistance 輔助重量' : 'Weight 槓片重量'}
               </div>
               <div className="col-span-1"></div>
             </div>
 
             {rows.map((row, index) => (
-              <div key={row.id} className="grid grid-cols-12 gap-2 items-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/30">
-                <div className="col-span-2 relative">
-                   <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
-                     <Layers size={14} />
-                   </div>
-                   <input
-                    type="number" // tel or number ensures numeric keyboard on mobile
-                    inputMode="numeric"
-                    value={row.sets}
-                    onChange={(e) => handleRowChange(row.id, 'sets', e.target.value)}
-                    onFocus={handleNumberInputFocus}
-                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
-                    placeholder="1"
-                  />
+              <div key={row.id} className={cn("grid grid-cols-12 gap-2 bg-slate-800/40 p-3 rounded-2xl border border-slate-700/30", bodyweightMode !== 'normal' ? "items-end" : "items-center")}>
+                <div className="col-span-2">
+                  <div className="relative">
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                      <Layers size={14} />
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={row.sets}
+                      onChange={(e) => handleRowChange(row.id, 'sets', e.target.value)}
+                      onFocus={handleNumberInputFocus}
+                      className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
+                      placeholder="1"
+                    />
+                  </div>
                 </div>
-                <div className="col-span-3 relative">
-                   <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
-                     <Repeat size={14} />
-                   </div>
-                   <input
-                    type="number"
-                    inputMode="numeric"
-                    value={row.reps}
-                    onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
-                    onFocus={handleNumberInputFocus}
-                    className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
-                    placeholder="10"
-                  />
+                <div className="col-span-3">
+                  <div className="relative">
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
+                      <Repeat size={14} />
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={row.reps}
+                      onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
+                      onFocus={handleNumberInputFocus}
+                      className="w-full bg-slate-900 border-none rounded-xl py-3 pl-5 pr-2 text-white text-center font-bold text-base sm:text-lg focus:ring-2 focus:ring-primary/50"
+                      placeholder="10"
+                    />
+                  </div>
                 </div>
                 <div className="col-span-6 pl-1">
-                  {isAssisted && (
-                    <div className="mb-1 text-center text-xs text-slate-500">
-                      {bodyWeightKg !== null ? (
-                        <>= <span className="text-amber-400 font-medium">
-                          {Math.max(0, Math.round((bodyWeightKg - (row.weightUnit === 'lb' ? (Number(row.weight) || 0) * LB_TO_KG : (Number(row.weight) || 0))) * 10) / 10)} kg
-                        </span> effective</>
-                      ) : (
-                        <span className="text-red-400/70">set body weight first</span>
-                      )}
-                    </div>
-                  )}
+                  {bodyweightMode !== 'normal' && (() => {
+                    const addedKg = row.weightUnit === 'lb' ? (Number(row.weight) || 0) * LB_TO_KG : (Number(row.weight) || 0);
+                    const bw = bodyWeightKg ?? 0;
+                    const effective = bodyweightMode === 'bw_plus'
+                      ? Math.round((bw + addedKg) * 10) / 10
+                      : Math.max(0, Math.round((bw - addedKg) * 10) / 10);
+                    return (
+                      <div className="mb-1 text-center text-xs text-slate-500">
+                        {bodyWeightKg !== null ? (
+                          <>{bodyweightMode === 'bw_plus' ? `${Math.round(bw * 10) / 10} + ` : `${Math.round(bw * 10) / 10} − `}
+                            <span className={bodyweightMode === 'bw_plus' ? 'text-blue-400 font-medium' : 'text-amber-400 font-medium'}>
+                              {effective} kg
+                            </span>{' '}effective</>
+                        ) : (
+                          <span className="text-red-400/70">set body weight first</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="flex gap-1.5">
                     <div className="relative flex-1">
                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">

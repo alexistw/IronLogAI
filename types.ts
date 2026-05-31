@@ -17,8 +17,9 @@ export interface Exercise {
   unloadedBarWeightUnit?: WeightUnit;
   date: string; // ISO string
   timestamp: number;
-  assisted?: boolean;
-  assistanceWeight?: number; // stored in kg (body weight - effective)
+  assisted?: boolean; // legacy — kept for backward compat; prefer bodyweightMode
+  bodyweightMode?: 'bw_plus' | 'bw_minus'; // bw_plus = BW + added weight; bw_minus = BW - assistance
+  assistanceWeight?: number; // stored in kg
   assistanceWeightInput?: number; // raw user input for edit round-trip
   assistanceWeightUnitInput?: WeightUnit;
 }

@@ -96,6 +96,7 @@ export default function App() {
     unloadedBarWeight?: number;
     unloadedBarWeightUnit?: Exercise['weightUnit'];
     assisted?: boolean;
+    bodyweightMode?: Exercise['bodyweightMode'];
     assistanceWeight?: number;
     assistanceWeightInput?: number;
     assistanceWeightUnitInput?: Exercise['weightUnit'];
@@ -115,6 +116,7 @@ export default function App() {
       unloadedBarWeight: data.unloadedBarWeight,
       unloadedBarWeightUnit: data.unloadedBarWeightUnit,
       assisted: data.assisted,
+      bodyweightMode: data.bodyweightMode,
       assistanceWeight: data.assistanceWeight,
       assistanceWeightInput: data.assistanceWeightInput,
       assistanceWeightUnitInput: data.assistanceWeightUnitInput,
@@ -169,6 +171,7 @@ export default function App() {
     unloadedBarWeight?: number;
     unloadedBarWeightUnit?: Exercise['weightUnit'];
     assisted?: boolean;
+    bodyweightMode?: Exercise['bodyweightMode'];
     assistanceWeight?: number;
     assistanceWeightInput?: number;
     assistanceWeightUnitInput?: Exercise['weightUnit'];
@@ -188,6 +191,7 @@ export default function App() {
       unloadedBarWeight: data.unloadedBarWeight,
       unloadedBarWeightUnit: data.unloadedBarWeightUnit,
       assisted: data.assisted,
+      bodyweightMode: data.bodyweightMode,
       assistanceWeight: data.assistanceWeight,
       assistanceWeightInput: data.assistanceWeightInput,
       assistanceWeightUnitInput: data.assistanceWeightUnitInput,

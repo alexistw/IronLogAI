@@ -23,6 +23,7 @@ type MovementWeekStats = {
   topWeightKg: number;
   volumeKg: number;
   weightToReps: Map<string, number>;
+  bodyweightMode?: 'bw_plus' | 'bw_minus';
 };
 
 type WeekStats = {
@@ -77,6 +78,7 @@ const buildWeekStats = (weekKey: string, weekExercises: Exercise[]): WeekStats =
         topWeightKg: 0,
         volumeKg: 0,
         weightToReps: new Map<string, number>(),
+        bodyweightMode: ex.bodyweightMode ?? (ex.assisted ? 'bw_minus' : undefined),
       };
     }
 
@@ -118,9 +120,10 @@ const buildWeeklySummaryLines = (weeks: WeekStats[]) =>
     .map(week => {
       const movements = Object.entries(week.movementSummary)
         .sort((a, b) => b[1].sets - a[1].sets)
-        .map(([name, data]) =>
-          `${name}: ${data.sets} sets, ${data.reps} reps, top ${roundOne(data.topWeightKg)}kg, volume ${Math.round(data.volumeKg)}kg`
-        )
+        .map(([name, data]) => {
+          const tag = data.bodyweightMode === 'bw_plus' ? ' [BW+]' : data.bodyweightMode === 'bw_minus' ? ' [BW-]' : '';
+          return `${name}${tag}: ${data.sets} sets, ${data.reps} reps, top ${roundOne(data.topWeightKg)}kg, volume ${Math.round(data.volumeKg)}kg`;
+        })
         .join('; ');
 
       return `Week ${formatWeekLabel(week.weekStart)} | total sets ${week.totalSets} | total volume ${Math.round(week.totalVolume)}kg | movements: ${movements}`;
@@ -170,10 +173,11 @@ const buildShortTermMovementInsights = (weeks: WeekStats[]) => {
         ? `${commonWeights[0]}kg reps ${firstWeightReps.get(commonWeights[0])} -> ${secondWeightReps.get(commonWeights[0])}`
         : 'no same-load comparison';
 
+      const bwTag = allStats[0]?.bodyweightMode === 'bw_plus' ? ' [BW+]' : allStats[0]?.bodyweightMode === 'bw_minus' ? ' [BW-]' : '';
       return {
         totalSets,
         totalVolume,
-        line: `${name} | 4-week volume ${Math.round(totalVolume)}kg | top weight ${roundOne(firstTopWeight)} -> ${roundOne(secondTopWeight)}kg | volume ${Math.round(firstVolume)} -> ${Math.round(secondVolume)}kg | ${sameWeightRepNote}`,
+        line: `${name}${bwTag} | 4-week volume ${Math.round(totalVolume)}kg | top weight ${roundOne(firstTopWeight)} -> ${roundOne(secondTopWeight)}kg | volume ${Math.round(firstVolume)} -> ${Math.round(secondVolume)}kg | ${sameWeightRepNote}`,
       };
     })
     .sort((a, b) => b.totalVolume - a.totalVolume || b.totalSets - a.totalSets)
@@ -206,10 +210,11 @@ const buildLongTermMovementInsights = (weeks: WeekStats[]) => {
       const earlyVolume = earlyStats.reduce((sum, item) => sum + item.volumeKg, 0);
       const lateVolume = lateStats.reduce((sum, item) => sum + item.volumeKg, 0);
 
+      const bwTag = allStats[0]?.bodyweightMode === 'bw_plus' ? ' [BW+]' : allStats[0]?.bodyweightMode === 'bw_minus' ? ' [BW-]' : '';
       return {
         totalSets,
         totalVolume,
-        line: `${name} | 12-week active ${allStats.length}/${weeks.length} weeks | top weight ${roundOne(earlyTopWeight)} -> ${roundOne(lateTopWeight)}kg | early 4-week volume ${Math.round(earlyVolume)}kg | late 4-week volume ${Math.round(lateVolume)}kg`,
+        line: `${name}${bwTag} | 12-week active ${allStats.length}/${weeks.length} weeks | top weight ${roundOne(earlyTopWeight)} -> ${roundOne(lateTopWeight)}kg | early 4-week volume ${Math.round(earlyVolume)}kg | late 4-week volume ${Math.round(lateVolume)}kg`,
       };
     })
     .sort((a, b) => b.totalVolume - a.totalVolume || b.totalSets - a.totalSets)
@@ -265,7 +270,8 @@ export const generateWeeklyAnalysis = async (
 You are a strength training coach for a workout log app.
 Focus week: ${focusWeekStart}
 Analysis range: ${analysisStart} to ${analysisEnd}
-All loads are normalized to total kg.
+All loads are normalized to total kg (effective weight).
+Movement tags: [BW+] = bodyweight + added weight (e.g. weighted pull-ups; heavier = stronger); [BW-] = bodyweight - assistance (e.g. assisted lat pulldown; heavier logged weight = less assistance needed = improvement).
 
 User body metrics (current):
 ${bodyInfo}

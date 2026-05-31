@@ -23,7 +23,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, previousBe
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-white font-semibold text-lg leading-tight">{exercise.name}</h3>
-          {exercise.assisted && (
+          {(exercise.bodyweightMode === 'bw_plus') && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 shrink-0">
+              BW+
+            </span>
+          )}
+          {(exercise.bodyweightMode === 'bw_minus' || (!exercise.bodyweightMode && exercise.assisted)) && (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
               Assisted
             </span>
