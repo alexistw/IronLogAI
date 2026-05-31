@@ -21,7 +21,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, previousBe
   return (
     <div className="bg-card rounded-2xl p-4 mb-3 border border-slate-700/50 shadow-sm group">
       <div className="flex items-start justify-between gap-3 mb-1">
-        <h3 className="text-white font-semibold text-lg leading-tight">{exercise.name}</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-white font-semibold text-lg leading-tight">{exercise.name}</h3>
+          {exercise.assisted && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+              Assisted
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 shrink-0 -mr-1">
           <button
             onClick={() => onEdit(exercise)}

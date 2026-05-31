@@ -95,10 +95,14 @@ export default function App() {
     plateCalculationMode?: Exercise['weightMode'];
     unloadedBarWeight?: number;
     unloadedBarWeightUnit?: Exercise['weightUnit'];
+    assisted?: boolean;
+    assistanceWeight?: number;
+    assistanceWeightInput?: number;
+    assistanceWeightUnitInput?: Exercise['weightUnit'];
   }[]) => {
     const timestamp = Date.now();
     const newExercises: Exercise[] = newExercisesData.map((data, index) => ({
-      id: generateId() + index, // Ensure unique IDs even if generated in same ms
+      id: generateId() + index,
       name: data.name,
       sets: data.sets,
       reps: data.reps,
@@ -110,6 +114,10 @@ export default function App() {
       plateCalculationMode: data.plateCalculationMode,
       unloadedBarWeight: data.unloadedBarWeight,
       unloadedBarWeightUnit: data.unloadedBarWeightUnit,
+      assisted: data.assisted,
+      assistanceWeight: data.assistanceWeight,
+      assistanceWeightInput: data.assistanceWeightInput,
+      assistanceWeightUnitInput: data.assistanceWeightUnitInput,
       date: currentDate.toISOString(),
       timestamp: timestamp + index,
     }));
@@ -160,6 +168,10 @@ export default function App() {
     plateCalculationMode?: Exercise['weightMode'];
     unloadedBarWeight?: number;
     unloadedBarWeightUnit?: Exercise['weightUnit'];
+    assisted?: boolean;
+    assistanceWeight?: number;
+    assistanceWeightInput?: number;
+    assistanceWeightUnitInput?: Exercise['weightUnit'];
   }[] = []) => {
     const timestamp = Date.now();
     const additionalExercises: Exercise[] = additionalExercisesData.map((data, index) => ({
@@ -175,6 +187,10 @@ export default function App() {
       plateCalculationMode: data.plateCalculationMode,
       unloadedBarWeight: data.unloadedBarWeight,
       unloadedBarWeightUnit: data.unloadedBarWeightUnit,
+      assisted: data.assisted,
+      assistanceWeight: data.assistanceWeight,
+      assistanceWeightInput: data.assistanceWeightInput,
+      assistanceWeightUnitInput: data.assistanceWeightUnitInput,
       date: updatedExercise.date,
       timestamp: timestamp + index,
     }));
@@ -416,11 +432,12 @@ export default function App() {
 
       {/* Modals */}
       {isAddModalOpen && (
-        <AddExerciseForm 
-          onAdd={handleAddExercise} 
+        <AddExerciseForm
+          onAdd={handleAddExercise}
           onUpdate={handleUpdateExercise}
           initialExercise={editingExercise}
-          onClose={handleCloseAddModal} 
+          userProfile={userProfile}
+          onClose={handleCloseAddModal}
         />
       )}
 

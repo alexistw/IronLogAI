@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Plus, X, Trash2, Layers, Repeat, Dumbbell, ChevronLeft } from 'lucide-react';
 import { cn, LB_TO_KG } from '../utils';
-import { Exercise, WeightMode, WeightUnit } from '../types';
+import { Exercise, UserProfile, WeightMode, WeightUnit } from '../types';
 
 interface ExerciseFormData {
   name: string;
@@ -16,12 +16,17 @@ interface ExerciseFormData {
   plateCalculationMode?: WeightMode;
   unloadedBarWeight?: number;
   unloadedBarWeightUnit?: WeightUnit;
+  assisted?: boolean;
+  assistanceWeight?: number;
+  assistanceWeightInput?: number;
+  assistanceWeightUnitInput?: WeightUnit;
 }
 
 interface AddExerciseFormProps {
   onAdd: (exercises: ExerciseFormData[]) => void;
   onUpdate?: (exercise: Exercise, additionalExercises?: ExerciseFormData[]) => void;
   initialExercise?: Exercise | null;
+  userProfile: UserProfile;
   onClose: () => void;
 }
 
@@ -33,9 +38,10 @@ interface SetRow {
   weightUnit: WeightUnit;
 }
 
-export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, onClose }) => {
+export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdate, initialExercise, userProfile, onClose }) => {
   const isEditMode = !!initialExercise;
   const [name, setName] = useState(initialExercise?.name ?? '');
+  const [isAssisted, setIsAssisted] = useState(initialExercise?.assisted ?? false);
   const [barWeight, setBarWeight] = useState(
     initialExercise ? String(initialExercise.unloadedBarWeight ?? 0) : '0'
   );
@@ -45,15 +51,25 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   const [weightMode, setWeightMode] = useState<WeightMode>(
     initialExercise?.plateCalculationMode ?? initialExercise?.weightMode ?? 'double_hand'
   );
-  
+
+  const bodyWeightKg = userProfile.weightValue !== null
+    ? (userProfile.weightUnit === 'lb' ? userProfile.weightValue * LB_TO_KG : userProfile.weightValue)
+    : null;
+
   // Initialize with one empty row
   const [rows, setRows] = useState<SetRow[]>([
     {
       id: '1',
       sets: initialExercise ? String(initialExercise.sets) : '',
       reps: initialExercise ? String(initialExercise.reps) : '',
-      weight: initialExercise ? String(initialExercise.plateWeightInput ?? initialExercise.weight) : '',
-      weightUnit: initialExercise?.plateWeightUnitInput ?? initialExercise?.weightUnit ?? 'kg',
+      weight: initialExercise
+        ? String(initialExercise.assisted
+            ? (initialExercise.assistanceWeightInput ?? 0)
+            : (initialExercise.plateWeightInput ?? initialExercise.weight))
+        : '',
+      weightUnit: initialExercise?.assisted
+        ? (initialExercise.assistanceWeightUnitInput ?? 'kg')
+        : (initialExercise?.plateWeightUnitInput ?? initialExercise?.weightUnit ?? 'kg'),
     }
   ]);
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
@@ -75,6 +91,7 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
   useEffect(() => {
     if (!initialExercise) return;
     setName(initialExercise.name);
+    setIsAssisted(initialExercise.assisted ?? false);
     setBarWeight(String(initialExercise.unloadedBarWeight ?? 0));
     setBarWeightUnit(initialExercise.unloadedBarWeightUnit ?? 'kg');
     setWeightMode(initialExercise.plateCalculationMode ?? initialExercise.weightMode);
@@ -82,8 +99,12 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
       id: '1',
       sets: String(initialExercise.sets),
       reps: String(initialExercise.reps),
-      weight: String(initialExercise.plateWeightInput ?? initialExercise.weight),
-      weightUnit: initialExercise.plateWeightUnitInput ?? initialExercise.weightUnit,
+      weight: String(initialExercise.assisted
+        ? (initialExercise.assistanceWeightInput ?? 0)
+        : (initialExercise.plateWeightInput ?? initialExercise.weight)),
+      weightUnit: initialExercise.assisted
+        ? (initialExercise.assistanceWeightUnitInput ?? 'kg')
+        : (initialExercise.plateWeightUnitInput ?? initialExercise.weightUnit),
     }]);
   }, [initialExercise]);
 
@@ -134,16 +155,34 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
     if (!name) return;
 
     const dataToAdd = rows.map(row => {
-      const inputPlateWeight = Number(row.weight) || 0;
+      const inputWeight = Number(row.weight) || 0;
       const inputBarWeight = Number(barWeight) || 0;
+
+      if (isAssisted) {
+        const assistKg = row.weightUnit === 'lb' ? inputWeight * LB_TO_KG : inputWeight;
+        const effectiveKg = Math.max(0, Math.round(((bodyWeightKg ?? 0) - assistKg) * 100) / 100);
+        return {
+          name,
+          sets: Number(row.sets) || 1,
+          reps: Number(row.reps) || 0,
+          weight: effectiveKg,
+          weightUnit: 'kg' as const,
+          weightMode: 'double_hand' as const,
+          assisted: true,
+          assistanceWeight: Math.round(assistKg * 100) / 100,
+          assistanceWeightInput: inputWeight,
+          assistanceWeightUnitInput: row.weightUnit,
+        };
+      }
+
       return {
-        name: name,
+        name,
         sets: Number(row.sets) || 1,
         reps: Number(row.reps) || 0,
-        weight: normalizeToKgTotal(inputPlateWeight, row.weightUnit, weightMode, inputBarWeight, barWeightUnit),
+        weight: normalizeToKgTotal(inputWeight, row.weightUnit, weightMode, inputBarWeight, barWeightUnit),
         weightUnit: 'kg' as const,
         weightMode: 'double_hand' as const,
-        plateWeightInput: inputPlateWeight,
+        plateWeightInput: inputWeight,
         plateWeightUnitInput: row.weightUnit,
         plateCalculationMode: weightMode,
         unloadedBarWeight: inputBarWeight,
@@ -211,7 +250,42 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             />
           </div>
 
-          <div className="mb-6 space-y-4">
+          {/* Assisted Machine Toggle */}
+          <div className="mb-6">
+            <button
+              type="button"
+              onClick={() => setIsAssisted(prev => !prev)}
+              className={cn(
+                "w-full flex items-center justify-between px-5 py-4 rounded-2xl border font-semibold text-sm transition-all",
+                isAssisted
+                  ? "bg-amber-500/15 border-amber-500/50 text-amber-400"
+                  : "bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-300"
+              )}
+            >
+              <span>輔助器材模式 Assisted Machine</span>
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full font-bold",
+                isAssisted ? "bg-amber-500/20 text-amber-300" : "bg-slate-700 text-slate-500"
+              )}>
+                {isAssisted ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
+            {isAssisted && (
+              <div className={cn(
+                "mt-2 px-4 py-3 rounded-xl text-sm",
+                bodyWeightKg !== null
+                  ? "bg-slate-800/60 text-slate-400"
+                  : "bg-red-500/10 border border-red-500/30 text-red-400"
+              )}>
+                {bodyWeightKg !== null
+                  ? <>體重 Body weight: <span className="text-white font-semibold">{Math.round(bodyWeightKg * 10) / 10} kg</span></>
+                  : "⚠ 請先在 Settings 設定體重 / Set your body weight in Settings first"}
+              </div>
+            )}
+          </div>
+
+          <div className={cn("mb-6 space-y-4", isAssisted && "hidden")}>
             <div>
               <label className="block text-primary text-xs font-bold uppercase tracking-wider mb-2 ml-1">
                 Unloaded Bar Weight 空槓(器材)重量
@@ -292,7 +366,9 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
             <div className="grid grid-cols-12 gap-2 px-2 mb-2">
               <div className="col-span-2 text-center text-[10px] text-slate-500 font-semibold uppercase">Sets 組數</div>
               <div className="col-span-3 text-center text-[10px] text-slate-500 font-semibold uppercase">Reps 次數</div>
-              <div className="col-span-6 pl-1 text-center text-[10px] text-slate-500 font-semibold uppercase">Weight 槓片重量</div>
+              <div className="col-span-6 pl-1 text-center text-[10px] text-slate-500 font-semibold uppercase">
+                {isAssisted ? 'Assistance 輔助重量' : 'Weight 槓片重量'}
+              </div>
               <div className="col-span-1"></div>
             </div>
 
@@ -327,6 +403,17 @@ export const AddExerciseForm: React.FC<AddExerciseFormProps> = ({ onAdd, onUpdat
                   />
                 </div>
                 <div className="col-span-6 pl-1">
+                  {isAssisted && (
+                    <div className="mb-1 text-center text-xs text-slate-500">
+                      {bodyWeightKg !== null ? (
+                        <>= <span className="text-amber-400 font-medium">
+                          {Math.max(0, Math.round((bodyWeightKg - (row.weightUnit === 'lb' ? (Number(row.weight) || 0) * LB_TO_KG : (Number(row.weight) || 0))) * 10) / 10)} kg
+                        </span> effective</>
+                      ) : (
+                        <span className="text-red-400/70">set body weight first</span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex gap-1.5">
                     <div className="relative flex-1">
                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">

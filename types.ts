@@ -17,6 +17,10 @@ export interface Exercise {
   unloadedBarWeightUnit?: WeightUnit;
   date: string; // ISO string
   timestamp: number;
+  assisted?: boolean;
+  assistanceWeight?: number; // stored in kg (body weight - effective)
+  assistanceWeightInput?: number; // raw user input for edit round-trip
+  assistanceWeightUnitInput?: WeightUnit;
 }
 
 export interface WeeklySummary {
