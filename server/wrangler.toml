@@ -1,0 +1,36 @@
+name = "ironlog-ai-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-09-18"
+
+[vars]
+# Which vendor serves requests. Comma-separated = fallback chain, tried in order.
+#   "gemini"             -> Gemini only
+#   "anthropic"          -> Claude only
+#   "anthropic,gemini"   -> Claude, falling back to Gemini on transient failures
+AI_PROVIDER = "gemini"
+
+# Per-provider model override (optional — each adapter has a sensible default).
+# AI_MODEL_ANTHROPIC = "claude-opus-5"
+# AI_MODEL_OPENAI    = "gpt-4.1-mini"
+# AI_MODEL_GEMINI    = "gemini-3.6-flash"
+
+# Anthropic-only: thinking depth / spend. low | medium | high | xhigh | max
+ANTHROPIC_EFFORT = "low"
+
+ALLOWED_ORIGINS = "capacitor://localhost,https://localhost,http://localhost:3000"
+
+# API keys are secrets, NOT vars. Set them with:
+#   wrangler secret put GEMINI_API_KEY
+#   wrangler secret put ANTHROPIC_API_KEY
+#   wrangler secret put OPENAI_API_KEY
+#   wrangler secret put APP_SHARED_SECRET   (optional)
+
+# Per-IP rate limiting. The worker uses this binding when present and skips
+# rate limiting entirely when absent. VERIFY THE CURRENT SYNTAX against
+# Cloudflare's Rate Limiting docs before uncommenting — this binding's shape
+# has changed between wrangler releases.
+# [[unsafe.bindings]]
+# name = "RATE_LIMITER"
+# type = "ratelimit"
+# namespace_id = "1001"
+# simple = { limit = 20, period = 60 }

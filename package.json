@@ -13,7 +13,6 @@
     "@capacitor/core": "^8.1.0",
     "@capacitor/ios": "^8.1.0",
     "@capgo/capacitor-native-biometric": "^8.3.7",
-    "@google/genai": "^1.41.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.574.0",
     "react": "^19.2.4",

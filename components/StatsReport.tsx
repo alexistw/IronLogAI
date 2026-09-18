@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Exercise, UserProfile } from '../types';
 import { getMonday, getWeekId, getExerciseEffectiveWeightKg, getExerciseVolumeKg } from '../utils';
-import { generateWeeklyAnalysis } from '../services/geminiService';
+import { generateWeeklyAnalysis } from '../services/coachService';
 import { getStatsReportState, saveStatsReportState } from '../services/storageService';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid

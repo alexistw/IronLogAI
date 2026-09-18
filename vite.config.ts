@@ -11,8 +11,11 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // No provider API key is ever bundled into the app. The client only
+        // knows the proxy URL; the worker holds the keys and picks the vendor.
+        'process.env.AI_PROXY_URL': JSON.stringify(env.AI_PROXY_URL ?? ''),
+        // Optional shared header. Obfuscation only — it ships in the bundle.
+        'process.env.AI_APP_KEY': JSON.stringify(env.AI_APP_KEY ?? ''),
       },
       resolve: {
         alias: {

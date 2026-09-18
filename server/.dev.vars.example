@@ -1,0 +1,5 @@
+# Copy to server/.dev.vars for `wrangler dev`. Never commit .dev.vars.
+GEMINI_API_KEY=your-gemini-key
+# ANTHROPIC_API_KEY=your-anthropic-key
+# OPENAI_API_KEY=your-openai-key
+# APP_SHARED_SECRET=some-long-random-string

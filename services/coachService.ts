@@ -1,18 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import { Exercise, UserProfile } from '../types';
 import { getExerciseEffectiveWeightKg, getExerciseVolumeKg, getMonday } from '../utils';
-
-let aiClient: GoogleGenAI | null = null;
-const AI_COACH_MODEL = 'gemini-3.6-flash';
-
-const getAiClient = () => {
-  if (!aiClient) {
-    const apiKey = process.env.API_KEY;
-    console.log("[IronLog] Initializing Gemini. Key present:", !!apiKey);
-    aiClient = new GoogleGenAI({ apiKey: apiKey || '' });
-  }
-  return aiClient;
-};
+import { AiConfigError, AiRequestError, requestCoach } from './aiClient';
 
 const formatWeekLabel = (date: Date) =>
   `${date.toLocaleDateString()} - ${new Date(date.getTime() + 6 * 86400000).toLocaleDateString()}`;
@@ -267,11 +255,8 @@ export const generateWeeklyAnalysis = async (
   const bodyInfo = [getProfileHeightText(userProfile), getProfileWeightText(userProfile)].join('\n');
 
   const prompt = `
-You are a strength training coach for a workout log app.
 Focus week: ${focusWeekStart}
 Analysis range: ${analysisStart} to ${analysisEnd}
-All loads are normalized to total kg (effective weight).
-Movement tags: [BW+] = bodyweight + added weight (e.g. weighted pull-ups; heavier = stronger); [BW-] = bodyweight - assistance (e.g. assisted lat pulldown; heavier logged weight = less assistance needed = improvement).
 
 User body metrics (current):
 ${bodyInfo}
@@ -301,32 +286,15 @@ Please provide:
 4. If 12 weeks are not available, clearly state this limitation.
 5. Practical next-week action steps.
 
-Constraints:
-- Output in Traditional Chinese (Taiwan).
-- Use short paragraphs or bullet points.
-- Keep it under 280 words.
-- Tone should be motivating, concrete, and practical.
 `;
 
   try {
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: AI_COACH_MODEL,
-      contents: prompt,
-    });
-
-    if (!response || !response.text) {
-      throw new Error("Empty response from Gemini API");
+    return await requestCoach('weekly-coach', prompt);
+  } catch (error) {
+    console.error("AI coach request failed:", error);
+    if (error instanceof AiConfigError || error instanceof AiRequestError) {
+      return error.message;
     }
-
-    return response.text;
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
-
-    if (error.message?.includes("API key") || error.status === 400 || error.status === 403) {
-      return `Configuration Error: API Key issue. (Details: ${error.message || error.status})`;
-    }
-
-    return `AI Coach Error: ${error.message || "Unknown error"}.`;
+    return "AI 教練暫時無法使用，請稍後再試。";
   }
 };
