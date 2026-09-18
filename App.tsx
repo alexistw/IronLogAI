@@ -3,6 +3,7 @@ import { Tab, Exercise, UserProfile } from './types';
 import { getExercises, deleteExercise, getUserProfile, saveUserProfile, migrateAssistPullUpsToBwMinus } from './services/storageService';
 import { DailyLog } from './components/DailyLog';
 import { StatsReport } from './components/StatsReport';
+import { BackupSection } from './components/BackupSection';
 import { LoginPage } from './components/LoginPage';
 import { AddExerciseForm } from './components/AddExerciseForm';
 import { Button } from './components/Button';
@@ -221,6 +222,11 @@ export default function App() {
     setActiveTab(Tab.LOG); // Reset tab to default
   };
 
+  const handleBackupImported = () => {
+    setExercises(getExercises());
+    setUserProfile(getUserProfile());
+  };
+
   if (!isAuthenticated) {
     return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
   }
@@ -368,7 +374,12 @@ export default function App() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <BackupSection
+                  exerciseCount={exercises.length}
+                  onImported={handleBackupImported}
+                />
+
+                <div className="space-y-4 mt-8">
                     <Button variant="danger" size="lg" className="w-full flex items-center justify-center gap-3" onClick={handleLogout}>
                         <LogOut size={20} />
                         Logout 登出

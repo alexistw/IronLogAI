@@ -204,3 +204,9 @@ export const getStatsReportState = (): StoredStatsReportState => {
 export const saveStatsReportState = (state: StoredStatsReportState): void => {
   localStorage.setItem(STATS_REPORT_STATE_KEY, JSON.stringify(state));
 };
+
+// Bulk write used by backup restore. Callers are responsible for sanitizing
+// entries first; getExercises() still normalizes units on the way back out.
+export const replaceAllExercises = (exercises: Exercise[]): void => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(exercises));
+};
