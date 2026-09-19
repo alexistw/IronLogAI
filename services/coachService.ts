@@ -110,7 +110,7 @@ const buildWeeklySummaryLines = (weeks: WeekStats[]) =>
         .sort((a, b) => b[1].sets - a[1].sets)
         .map(([name, data]) => {
           const tag = data.bodyweightMode === 'bw_plus' ? ' [BW+]' : data.bodyweightMode === 'bw_minus' ? ' [BW-]' : '';
-          return `${name}${tag}: ${data.sets} sets, ${data.reps} reps, top ${roundOne(data.topWeightKg)}kg, volume ${Math.round(data.volumeKg)}kg`;
+          return `${name}${tag}: ${data.sets} sets, ${data.reps} total reps, top ${roundOne(data.topWeightKg)}kg, volume ${Math.round(data.volumeKg)}kg`;
         })
         .join('; ');
 
@@ -158,7 +158,7 @@ const buildShortTermMovementInsights = (weeks: WeekStats[]) => {
         .sort((a, b) => Number(b) - Number(a));
 
       const sameWeightRepNote = commonWeights.length > 0
-        ? `${commonWeights[0]}kg reps ${firstWeightReps.get(commonWeights[0])} -> ${secondWeightReps.get(commonWeights[0])}`
+        ? `at ${commonWeights[0]}kg total reps ${firstWeightReps.get(commonWeights[0])} -> ${secondWeightReps.get(commonWeights[0])}`
         : 'no same-load comparison';
 
       const bwTag = allStats[0]?.bodyweightMode === 'bw_plus' ? ' [BW+]' : allStats[0]?.bodyweightMode === 'bw_minus' ? ' [BW-]' : '';
@@ -260,6 +260,13 @@ Analysis range: ${analysisStart} to ${analysisEnd}
 
 User body metrics (current):
 ${bodyInfo}
+
+How to read the data below:
+- "sets" and "total reps" are weekly totals across all sessions for that movement.
+  "total reps" is sets x reps-per-set summed, NOT reps per set. Never describe it
+  as the number of reps completed in one set.
+- "top" / "top weight" is the heaviest effective load used that week, in kg.
+- "volume" is load x reps summed, in kg.
 
 Recent 4-week weekly data:
 ${recentFourWeekSummary}
