@@ -121,12 +121,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         )}
 
-        {/* Dev Skip Link */}
-        <div className="pt-8">
-           <button onClick={handleSkip} className="text-xs text-slate-700 hover:text-slate-500 underline decoration-slate-800">
-             Developer Skip (No Auth) 開發者略過
-           </button>
-        </div>
+        {/* Dev Skip Link — stripped from production builds, otherwise anyone
+            holding the phone can walk straight past the biometric gate. */}
+        {import.meta.env.DEV && (
+          <div className="pt-8">
+             <button onClick={handleSkip} className="text-xs text-slate-700 hover:text-slate-500 underline decoration-slate-800">
+               Developer Skip (No Auth) 開發者略過
+             </button>
+          </div>
+        )}
 
         <p className="text-slate-600 text-xs mt-8">
           Protected by device biometrics.<br/>受裝置生物辨識保護。
