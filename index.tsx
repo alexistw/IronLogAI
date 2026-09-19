@@ -2,6 +2,14 @@ import React, { ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
+// Inter is bundled with the app so it renders offline, with no CDN request at launch.
+import '@fontsource/inter/latin-300.css';
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import './index.css';
+
 // Fix: Make children optional to resolve strict JSX children checking error
 interface ErrorBoundaryProps {
   children?: ReactNode;

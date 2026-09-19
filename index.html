@@ -12,80 +12,9 @@
     <!-- Apple Touch Icon: Dark Slate Background with Emerald Dumbbell (Better for Home Screen) -->
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%230f172a'/%3E%3Cpath d='M6 5h2c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1zm10 0h2c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1h-2c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1zM9 11h6v2H9z' fill='%2310b981'/%3E%3C/svg%3E">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#10b981', // Emerald 500
-              secondary: '#3b82f6', // Blue 500
-              dark: '#0f172a', // Slate 900
-              card: '#1e293b', // Slate 800
-              accent: '#8b5cf6', // Violet 500
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-          },
-        },
-      };
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #0f172a;
-        color: #f8fafc;
-        /* Disable text selection for app-like feel */
-        -webkit-user-select: none;
-        user-select: none;
-        /* Handle iOS Safe Areas */
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
-        min-height: 100vh;
-      }
-      
-      /* Utilities for safe area padding */
-      .pt-safe {
-        padding-top: env(safe-area-inset-top);
-      }
-      .pb-safe {
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-      .mb-safe {
-        margin-bottom: env(safe-area-inset-bottom);
-      }
-
-      /* Hide scrollbar for cleaner mobile UI */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-
-      /* Input fields should be selectable */
-      input, textarea {
-        -webkit-user-select: text;
-        user-select: text;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "clsx": "https://esm.sh/clsx@^2.1.1",
-    "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.1",
-    "lucide-react": "https://esm.sh/lucide-react@^0.574.0"
-  }
-}
-</script>
-</head>
+    <!-- Tailwind, the Inter webfont and the app styles are all compiled into the bundle by
+         Vite (see index.css and index.tsx), so the app needs no network access to render. -->
+  </head>
   <body>
     <div id="root"></div>
     <!-- CRITICAL FIX: Include the main entry script -->
