@@ -42,7 +42,8 @@ export const openaiAdapter: ProviderAdapter = {
       'openai',
       config.baseUrl ?? API_URL,
       { authorization: `Bearer ${config.apiKey}` },
-      body
+      body,
+      { deadline: request.deadline }
     );
 
     const choice = data?.choices?.[0];

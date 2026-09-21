@@ -59,7 +59,8 @@ export const anthropicAdapter: ProviderAdapter = {
         'x-api-key': config.apiKey,
         'anthropic-version': API_VERSION,
       },
-      body
+      body,
+      { deadline: request.deadline }
     );
 
     // A safety decline returns HTTP 200 — check stop_reason before reading content.

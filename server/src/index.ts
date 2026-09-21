@@ -3,6 +3,7 @@ import {
   ProviderError,
   ResolvedProvider,
   resolveProviderChain,
+  withRetry,
 } from './providers';
 import { TASKS, isKnownTask } from './tasks';
 
@@ -47,15 +48,41 @@ const json = (body: unknown, status: number, extra: Record<string, string>): Res
     headers: { 'content-type': 'application/json', ...extra },
   });
 
+/**
+ * Total wall-clock budget for one /coach call, retries and chain fallback
+ * included. Kept below the app's own abort so the client sees our error
+ * message rather than its generic timeout.
+ */
+const REQUEST_BUDGET_MS = 95_000;
+
+/**
+ * Attempts per provider before moving to the next one in the chain.
+ *
+ * Two, not three: a single attempt against a thinking model can legitimately
+ * run for tens of seconds, so three of them cannot fit in any budget the user
+ * is willing to wait for — and each extra attempt costs real quota.
+ */
+const ATTEMPTS_PER_PROVIDER = 2;
+
 const runChain = async (
   chain: ResolvedProvider[],
-  request: Parameters<ResolvedProvider['adapter']['complete']>[0]
+  request: Parameters<ResolvedProvider['adapter']['complete']>[0],
+  deadline: number
 ) => {
   let lastError: unknown;
 
   for (const { adapter, config } of chain) {
+    if (Date.now() >= deadline) break;
+
     try {
-      return await adapter.complete(request, config);
+      // Retry the same provider first: an overloaded-model 503 is usually gone
+      // within a second, and re-asking the same vendor is cheaper and keeps
+      // report tone consistent compared with hopping to another one.
+      return await withRetry(() => adapter.complete(request, config), {
+        attempts: ATTEMPTS_PER_PROVIDER,
+        deadline,
+        label: adapter.name,
+      });
     } catch (err) {
       lastError = err;
       // Only fall through on transient failures. A refusal or content-filter
@@ -65,6 +92,9 @@ const runChain = async (
     }
   }
 
+  if (lastError === undefined) {
+    throw new Error('Provider chain exhausted before any attempt was made');
+  }
   throw lastError;
 };
 
@@ -141,13 +171,20 @@ export default {
       return json({ error: message }, 500, cors);
     }
 
+    const deadline = Date.now() + REQUEST_BUDGET_MS;
+
     try {
-      const result = await runChain(chain, {
-        system: definition.system,
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: definition.maxTokens,
-        temperature: definition.temperature,
-      });
+      const result = await runChain(
+        chain,
+        {
+          system: definition.system,
+          messages: [{ role: 'user', content: prompt }],
+          maxTokens: definition.maxTokens,
+          temperature: definition.temperature,
+          deadline,
+        },
+        deadline
+      );
 
       return json(
         { text: result.text, provider: result.provider, model: result.model },
@@ -157,8 +194,16 @@ export default {
     } catch (err) {
       console.error('[coach]', err);
       if (err instanceof ProviderError) {
-        // 4xx from upstream is our misconfiguration, not the client's fault.
-        const status = err.status === 422 ? 422 : err.status >= 500 ? 502 : 500;
+        // 4xx from upstream is our misconfiguration, not the client's fault —
+        // except quota and timeout, which the app words differently for the user.
+        const status =
+          err.status === 422
+            ? 422
+            : err.status === 429
+              ? 429
+              : err.status >= 500 || err.status === 408
+                ? 502
+                : 500;
         return json({ error: err.message }, status, cors);
       }
       return json({ error: 'AI request failed' }, 500, cors);

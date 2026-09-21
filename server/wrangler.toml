@@ -7,6 +7,12 @@ compatibility_date = "2026-09-18"
 #   "gemini"             -> Gemini only
 #   "anthropic"          -> Claude only
 #   "anthropic,gemini"   -> Claude, falling back to Gemini on transient failures
+#
+# Each provider is now retried up to 3 times in place (see withRetry) before the
+# chain moves on, which absorbs Gemini's "model is overloaded" 503s. A single
+# entry still has no fallback, so a sustained Gemini outage remains an outage —
+# set "gemini,anthropic" and add ANTHROPIC_API_KEY to cover that case. A
+# provider whose key is unset is skipped, so listing one early costs nothing.
 AI_PROVIDER = "gemini"
 
 # Per-provider model override (optional — each adapter has a sensible default).

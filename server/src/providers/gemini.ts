@@ -36,7 +36,9 @@ export const geminiAdapter: ProviderAdapter = {
 
     const url = config.baseUrl ?? `${API_BASE}/${encodeURIComponent(model)}:generateContent`;
 
-    const data = await postJson('gemini', url, { 'x-goog-api-key': config.apiKey }, body);
+    const data = await postJson('gemini', url, { 'x-goog-api-key': config.apiKey }, body, {
+      deadline: request.deadline,
+    });
 
     if (data?.promptFeedback?.blockReason) {
       throw new ProviderError(
@@ -55,7 +57,16 @@ export const geminiAdapter: ProviderAdapter = {
       : '';
 
     if (!text.trim()) {
-      throw new ProviderError('Empty response from Gemini', 'gemini', 502, true);
+      // An empty body with one of these finish reasons is a deterministic
+      // outcome, not a blip — retrying it just pays for the same answer again.
+      const finish = candidate?.finishReason;
+      const deterministic = finish === 'MAX_TOKENS' || finish === 'SAFETY' || finish === 'RECITATION';
+      throw new ProviderError(
+        `Empty response from Gemini${finish ? ` (${finish})` : ''}`,
+        'gemini',
+        deterministic ? 422 : 502,
+        !deterministic
+      );
     }
 
     return { text, provider: 'gemini', model };

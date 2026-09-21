@@ -50,6 +50,49 @@ A chain only falls through on **retryable** failures (timeout, 429, 5xx). A
 refusal or content-filter block is a real answer, so it is returned as-is rather
 than burning a second vendor's tokens on the same request.
 
+### Transient failures
+
+Each provider gets **2 attempts** with jittered backoff (capped at 4s) before
+the chain moves to the next entry. `Retry-After` is honoured when the upstream
+sends it.
+
+Timing is sized against measured latency, not guesswork. A trivial prompt to
+`gemini-3.6-flash` takes ~11s server-side (`server-timing: gfet4t7; dur=10977`)
+because thinking is on by default, and the weekly-coach prompt is up to 24k
+chars with a 4096 token cap. Hence:
+
+| Constant | Value | Where |
+|---|---|---|
+| `ATTEMPT_TIMEOUT_MS` | 45s | `providers/types.ts` |
+| `ATTEMPTS_PER_PROVIDER` | 2 | `index.ts` |
+| `REQUEST_BUDGET_MS` | 95s | `index.ts` |
+| `REQUEST_TIMEOUT_MS` (app) | 105s | `services/aiClient.ts` |
+
+Those must stay ordered `ATTEMPT < BUDGET < app timeout`. If the app aborts
+first, the user sees a generic timeout instead of the proxy's real error — which
+is exactly how a Gemini quota problem once looked like a mystery.
+
+**What is deliberately not retried**, because retrying costs quota and cannot
+change the answer:
+
+- `429` without a `Retry-After` header — a free-tier quota wall, not a blip.
+  Retrying spends the little quota that remains and pushes the limit further out.
+- Empty Gemini responses whose `finishReason` is `MAX_TOKENS`, `SAFETY`, or
+  `RECITATION`.
+- Refusals and content-filter blocks (mapped to 422).
+
+### Retries are not a capacity fix
+
+Retrying only helps when the failure is transient. A persistent
+`503 UNAVAILABLE` on the free tier usually means the *model* has no free-tier
+capacity at all — new flagship models are the worst for this, and no amount of
+retrying will conjure capacity. The same key can look fine in AI Studio or the
+Gemini web app because those draw on a different quota pool. In that situation
+the real fixes are, in order of effort: pick a model with free-tier capacity
+(`AI_MODEL_GEMINI`), enable billing on the key, or add a second provider to the
+chain. Check `npx wrangler tail` for the `[gemini] 503 …` line — it carries
+Google's own explanation.
+
 Model defaults live in each adapter and can be overridden per provider with
 `AI_MODEL_ANTHROPIC`, `AI_MODEL_OPENAI`, `AI_MODEL_GEMINI`.
 

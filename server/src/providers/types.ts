@@ -22,6 +22,12 @@ export interface ChatRequest {
    * (see the Anthropic adapter), so each adapter decides whether to forward it.
    */
   temperature?: number;
+  /**
+   * Absolute epoch-ms deadline for the whole request, retries included. Set by
+   * the worker from the app's own timeout so we never keep an upstream call
+   * alive after the client has already given up on it.
+   */
+  deadline?: number;
 }
 
 /** What every adapter returns, regardless of vendor. */
@@ -54,14 +60,48 @@ export class ProviderError extends Error {
     message: string,
     readonly provider: ProviderName,
     readonly status: number,
-    readonly retryable: boolean
+    readonly retryable: boolean,
+    /** Honour the upstream's own backoff hint when it sends one. */
+    readonly retryAfterMs?: number
   ) {
     super(message);
   }
 }
 
 export const isRetryableStatus = (status: number): boolean =>
-  status === 408 || status === 429 || status >= 500;
+  status === 408 || status >= 500;
+
+const BASE_BACKOFF_MS = 500;
+const MAX_BACKOFF_MS = 4_000;
+
+/**
+ * Per-attempt ceiling.
+ *
+ * Sized against measured behaviour, not intuition: a *trivial* prompt to
+ * gemini-3.6-flash took ~11s server-side (`server-timing: dur=10977`) because
+ * thinking is on by default, and a full coach prompt is 24k chars with a 4096
+ * token cap. An earlier 20s value here aborted healthy requests and then
+ * retried them, tripling quota burn for nothing.
+ */
+const ATTEMPT_TIMEOUT_MS = 45_000;
+
+/** `Retry-After` is either delay-seconds or an HTTP date. Both appear in the wild. */
+const parseRetryAfter = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
+};
+
+export interface PostJsonOptions {
+  /** Per-attempt timeout. Clamped by `deadline` when that is sooner. */
+  timeoutMs?: number;
+  /** Absolute epoch-ms deadline for the whole request. */
+  deadline?: number;
+}
 
 /** Shared fetch wrapper: timeout, JSON parsing, uniform error shape. */
 export const postJson = async (
@@ -69,8 +109,19 @@ export const postJson = async (
   url: string,
   headers: Record<string, string>,
   body: unknown,
-  timeoutMs = 60_000
+  options: PostJsonOptions = {}
 ): Promise<any> => {
+  let timeoutMs = options.timeoutMs ?? ATTEMPT_TIMEOUT_MS;
+
+  if (options.deadline !== undefined) {
+    const remaining = options.deadline - Date.now();
+    if (remaining <= 0) {
+      // Not retryable: more attempts cannot fit, and the chain should stop too.
+      throw new ProviderError('Request budget exhausted', provider, 504, false);
+    }
+    timeoutMs = Math.min(timeoutMs, remaining);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -100,11 +151,23 @@ export const postJson = async (
     // Never echo the upstream body wholesale — it can contain key fragments
     // and account identifiers. Log server-side, return something bounded.
     console.error(`[${provider}] ${response.status} ${raw.slice(0, 500)}`);
+
+    const retryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
+
+    // A quota 429 is not a blip. On a free-tier key, retrying spends the little
+    // remaining quota and pushes the limit further out, so only retry when the
+    // upstream itself told us how long to wait and that wait is short.
+    const retryable =
+      response.status === 429
+        ? retryAfterMs !== undefined && retryAfterMs <= MAX_BACKOFF_MS
+        : isRetryableStatus(response.status);
+
     throw new ProviderError(
       `Upstream ${provider} error (${response.status})`,
       provider,
       response.status,
-      isRetryableStatus(response.status)
+      retryable,
+      retryAfterMs
     );
   }
 
@@ -112,5 +175,59 @@ export const postJson = async (
     return JSON.parse(raw);
   } catch {
     throw new ProviderError(`Malformed ${provider} response`, provider, 502, true);
+  }
+};
+
+/**
+ * Full jitter rather than a fixed delay: when a model is overloaded every
+ * caller gets the same 503 at the same moment, and retrying in lockstep just
+ * reproduces the spike that caused it.
+ */
+const backoffFor = (attempt: number, retryAfterMs?: number): number => {
+  if (retryAfterMs !== undefined) return Math.min(retryAfterMs, MAX_BACKOFF_MS);
+  const ceiling = Math.min(BASE_BACKOFF_MS * 2 ** (attempt - 1), MAX_BACKOFF_MS);
+  return Math.random() * ceiling;
+};
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export interface RetryOptions {
+  /** Total attempts including the first. */
+  attempts?: number;
+  /** Absolute epoch-ms deadline; no attempt is started once it has passed. */
+  deadline?: number;
+  /** Labels the retry log line. */
+  label?: string;
+}
+
+/**
+ * Retries transient provider failures in place.
+ *
+ * Gemini's 503 (`UNAVAILABLE` / "model is overloaded") is by far the most
+ * common failure on this workload and it is almost always gone a second later.
+ * Without this, a single 503 became a user-visible error even though the very
+ * next request would have succeeded.
+ */
+export const withRetry = async <T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> => {
+  const attempts = options.attempts ?? 3;
+  const label = options.label ?? 'provider';
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const retryable = err instanceof ProviderError && err.retryable;
+      if (!retryable || attempt >= attempts) throw err;
+
+      const wait = backoffFor(attempt, (err as ProviderError).retryAfterMs);
+      // Give up rather than sleep into a deadline we cannot beat.
+      if (options.deadline !== undefined && Date.now() + wait >= options.deadline) throw err;
+
+      console.warn(
+        `[retry] ${label} attempt ${attempt}/${attempts} failed (${(err as Error).message}); ` +
+          `retrying in ${Math.round(wait)}ms`
+      );
+      await sleep(wait);
+    }
   }
 };
