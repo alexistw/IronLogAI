@@ -1,6 +1,6 @@
 import { Exercise, UserProfile } from '../types';
 import { getExerciseEffectiveWeightKg, getExerciseVolumeKg, getMonday } from '../utils';
-import { AiConfigError, AiRequestError, requestCoach } from './aiClient';
+import { requestCoach } from './aiClient';
 
 const formatWeekLabel = (date: Date) =>
   `${date.toLocaleDateString()} - ${new Date(date.getTime() + 6 * 86400000).toLocaleDateString()}`;
@@ -295,13 +295,8 @@ Please provide:
 
 `;
 
-  try {
-    return await requestCoach('weekly-coach', prompt);
-  } catch (error) {
-    console.error("AI coach request failed:", error);
-    if (error instanceof AiConfigError || error instanceof AiRequestError) {
-      return error.message;
-    }
-    return "AI 教練暫時無法使用，請稍後再試。";
-  }
+  // Throws on failure rather than returning the error text as the report —
+  // the caller persists whatever comes back, so a returned error message ended
+  // up saved as that week's analysis until it was manually regenerated.
+  return requestCoach('weekly-coach', prompt);
 };

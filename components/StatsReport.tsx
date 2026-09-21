@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Exercise, UserProfile } from '../types';
 import { getMonday, getWeekId, getExerciseEffectiveWeightKg, getExerciseVolumeKg } from '../utils';
 import { generateWeeklyAnalysis } from '../services/coachService';
+import { describeAiError, formatAiErrorForLog } from '../services/aiClient';
 import { getStatsReportState, saveStatsReportState } from '../services/storageService';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
-import { Sparkles, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Table2 } from 'lucide-react';
+import { Sparkles, TrendingUp, CalendarDays, Loader2, Info, Sun, Dumbbell, Table2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from './Button';
 
 interface StatsReportProps {
@@ -32,6 +33,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
     }, {})
   );
   const [loading, setLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchDeltaRef = useRef({ x: 0, y: 0 });
@@ -129,18 +131,28 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
 
   const handleGenerateReport = async () => {
     setLoading(true);
-    const report = await generateWeeklyAnalysis(
-      analysisWindow.exercises,
-      selectedWeekStart.toLocaleDateString(),
-      analysisWindow.start.toLocaleDateString(),
-      analysisEndDate.toLocaleDateString(),
-      userProfile
-    );
-    setAiReportsByWeek(prev => ({
-      ...prev,
-      [selectedWeekId]: report,
-    }));
-    setLoading(false);
+    setAiError(null);
+
+    try {
+      const report = await generateWeeklyAnalysis(
+        analysisWindow.exercises,
+        selectedWeekStart.toLocaleDateString(),
+        analysisWindow.start.toLocaleDateString(),
+        analysisEndDate.toLocaleDateString(),
+        userProfile
+      );
+      setAiReportsByWeek(prev => ({
+        ...prev,
+        [selectedWeekId]: report,
+      }));
+    } catch (error) {
+      // Leave aiReportsByWeek untouched: a transient failure must not persist
+      // as this week's report, nor overwrite one that already generated fine.
+      console.error(`AI coach request failed: ${formatAiErrorForLog(error)}`);
+      setAiError(describeAiError(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const shiftWeek = (direction: 'prev' | 'next') => {
@@ -148,6 +160,12 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
     newDate.setDate(selectedWeekStart.getDate() + (direction === 'next' ? 7 : -7));
     setSelectedWeekStart(newDate);
   };
+
+  // The error belongs to one week's generation attempt, so don't let it follow
+  // the user to a week they have not tried yet.
+  useEffect(() => {
+    setAiError(null);
+  }, [selectedWeekId]);
 
   useEffect(() => {
     const aiReports = Object.entries(aiReportsByWeek).map(([weekId, report]) => ({
@@ -404,6 +422,29 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
             )}
 
             <div className="relative z-10 min-h-[100px]">
+              {aiError && !loading && (
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 animate-in fade-in">
+                  <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={16} />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-200">{aiError}</p>
+                    {aiReport && (
+                      <p className="text-xs text-red-300/70 mt-1">
+                        Showing the previously generated report below.
+                      </p>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleGenerateReport}
+                      className="mt-2 text-xs px-3"
+                    >
+                      <RotateCcw size={14} />
+                      Retry
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {loading ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 bg-slate-700 rounded w-3/4"></div>
@@ -414,7 +455,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
                 <div className="prose prose-invert prose-sm">
                   <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{aiReport}</p>
                 </div>
-              ) : analysisWindow.exercises.length === 0 ? (
+              ) : aiError ? null : analysisWindow.exercises.length === 0 ? (
                 <p className="text-slate-500 text-sm italic">
                   No data available for the selected analysis range.
                 </p>
