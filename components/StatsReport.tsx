@@ -42,7 +42,7 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
 
   const analysisWindow = useMemo(() => {
     const start = new Date(selectedWeekStart);
-    start.setDate(start.getDate() - (11 * 7));
+    start.setDate(start.getDate() - (7 * 7));
     start.setHours(0, 0, 0, 0);
 
     const end = new Date(selectedWeekStart);
@@ -136,9 +136,9 @@ export const StatsReport: React.FC<StatsReportProps> = ({ exercises, userProfile
     try {
       const report = await generateWeeklyAnalysis(
         analysisWindow.exercises,
-        selectedWeekStart.toLocaleDateString(),
-        analysisWindow.start.toLocaleDateString(),
-        analysisEndDate.toLocaleDateString(),
+        selectedWeekStart,
+        analysisWindow.start,
+        analysisEndDate,
         userProfile
       );
       setAiReportsByWeek(prev => ({

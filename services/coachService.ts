@@ -87,7 +87,7 @@ const buildWeekStats = (weekKey: string, weekExercises: Exercise[]): WeekStats =
   };
 };
 
-const groupExercisesByWeek = (exercises: Exercise[]) => {
+const groupExercisesByWeek = (exercises: Exercise[], analysisStart: Date, weekCount: number) => {
   const groupedByWeek = new Map<string, Exercise[]>();
 
   exercises.forEach(ex => {
@@ -98,9 +98,12 @@ const groupExercisesByWeek = (exercises: Exercise[]) => {
     groupedByWeek.set(weekKey, current);
   });
 
-  return Array.from(groupedByWeek.entries())
-    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-    .map(([weekKey, weekExercises]) => buildWeekStats(weekKey, weekExercises));
+  return Array.from({ length: weekCount }, (_, index) => {
+    const weekStart = new Date(analysisStart);
+    weekStart.setDate(weekStart.getDate() + index * 7);
+    const weekKey = getMonday(weekStart).toISOString();
+    return buildWeekStats(weekKey, groupedByWeek.get(weekKey) || []);
+  });
 };
 
 const buildWeeklySummaryLines = (weeks: WeekStats[]) =>
@@ -114,7 +117,7 @@ const buildWeeklySummaryLines = (weeks: WeekStats[]) =>
         })
         .join('; ');
 
-      return `Week ${formatWeekLabel(week.weekStart)} | total sets ${week.totalSets} | total volume ${Math.round(week.totalVolume)}kg | movements: ${movements}`;
+      return `Week ${formatWeekLabel(week.weekStart)} | total sets ${week.totalSets} | total volume ${Math.round(week.totalVolume)}kg | movements: ${movements || 'none'}`;
     })
     .join('\n');
 
@@ -211,31 +214,24 @@ const buildLongTermMovementInsights = (weeks: WeekStats[]) => {
     .join('\n');
 };
 
-const buildAnalysisSummary = (exercises: Exercise[]) => {
-  const allWeeks = groupExercisesByWeek(exercises);
+const buildAnalysisSummary = (exercises: Exercise[], analysisStart: Date) => {
+  // Keep the full calendar timeline. A week without workouts is meaningful
+  // training data (zero sets and volume), rather than a gap to discard.
+  const allWeeks = groupExercisesByWeek(exercises, analysisStart, 8);
+  const previousFourWeeks = allWeeks.slice(0, 4);
   const recentFourWeeks = allWeeks.slice(-4);
-  const hasTwelveWeeks = allWeeks.length >= 12;
 
   return {
-    hasTwelveWeeks,
+    previousFourWeekSummary: buildWeeklySummaryLines(previousFourWeeks),
     recentFourWeekSummary: buildWeeklySummaryLines(recentFourWeeks),
-    recentFourWeekTotals: recentFourWeeks
-      .map(week => `${formatWeekLabel(week.weekStart)}: sets ${week.totalSets}, volume ${Math.round(week.totalVolume)}kg`)
-      .join(' | '),
-    recentFourWeekMovementInsights: buildShortTermMovementInsights(recentFourWeeks),
-    twelveWeekSummary: hasTwelveWeeks ? buildWeeklySummaryLines(allWeeks) : '',
-    twelveWeekTotals: hasTwelveWeeks
-      ? allWeeks.map(week => `${formatWeekLabel(week.weekStart)}: ${Math.round(week.totalVolume)}kg`).join(' | ')
-      : '',
-    twelveWeekMovementInsights: hasTwelveWeeks ? buildLongTermMovementInsights(allWeeks) : '',
   };
 };
 
 export const generateWeeklyAnalysis = async (
   exercises: Exercise[],
-  focusWeekStart: string,
-  analysisStart: string,
-  analysisEnd: string,
+  focusWeekStart: Date,
+  analysisStart: Date,
+  analysisEnd: Date,
   userProfile: UserProfile
 ): Promise<string> => {
   if (exercises.length === 0) {
@@ -243,55 +239,43 @@ export const generateWeeklyAnalysis = async (
   }
 
   const {
-    hasTwelveWeeks,
+    previousFourWeekSummary,
     recentFourWeekSummary,
-    recentFourWeekTotals,
-    recentFourWeekMovementInsights,
-    twelveWeekSummary,
-    twelveWeekTotals,
-    twelveWeekMovementInsights,
-  } = buildAnalysisSummary(exercises);
+  } = buildAnalysisSummary(exercises, analysisStart);
 
   const bodyInfo = [getProfileHeightText(userProfile), getProfileWeightText(userProfile)].join('\n');
 
   const prompt = `
-Focus week: ${focusWeekStart}
-Analysis range: ${analysisStart} to ${analysisEnd}
+Focus week: ${focusWeekStart.toLocaleDateString()}
+Analysis range: ${analysisStart.toLocaleDateString()} to ${analysisEnd.toLocaleDateString()}
 
 User body metrics (current):
 ${bodyInfo}
 
-How to read the data below:
-- "sets" and "total reps" are weekly totals across all sessions for that movement.
-  "total reps" is sets x reps-per-set summed, NOT reps per set. Never describe it
-  as the number of reps completed in one set.
-- "top" / "top weight" is the heaviest effective load used that week, in kg.
-- "volume" is load x reps summed, in kg.
+Data rules:
+- Every block contains four consecutive calendar weeks. "movements: none" is a real
+  zero-training week and must remain part of the trend.
+- "sets" and "total reps" are weekly totals across all sessions. Total reps means
+  sets x reps-per-set summed, never reps completed in one set.
+- "top" is the heaviest effective load that week; "volume" is load x reps, in kg.
+- The two blocks below are eight consecutive calendar weeks. For the long-term
+  comparison, compare the previous four weeks with the recent four weeks.
 
-Recent 4-week weekly data:
+Previous 4-week block:
+${previousFourWeekSummary}
+
+Recent 4-week block:
 ${recentFourWeekSummary}
 
-Recent 4-week total trend:
-${recentFourWeekTotals}
-
-Recent 4-week movement trend:
-${recentFourWeekMovementInsights}
-
-${hasTwelveWeeks ? `Recent 12-week weekly data:
-${twelveWeekSummary}
-
-Recent 12-week volume curve:
-${twelveWeekTotals}
-
-Recent 12-week movement trend:
-${twelveWeekMovementInsights}` : '12-week review: skip, because available training history is under 12 weeks.'}
-
 Please provide:
-1. A concise 4-week trend summary.
-2. Concrete movement-level observations (load, reps at same load, total volume, possible bottlenecks).
-3. If 12 weeks are available, compare early vs late period trend and risks.
-4. If 12 weeks are not available, clearly state this limitation.
-5. Practical next-week action steps.
+1. A concise recent 4-week trend summary that includes zero-training weeks.
+2. An 8-week comparison of the previous 4-week block versus the recent 4-week block.
+3. Analyze training balance and trend by primary muscle group: chest, shoulders,
+   back, and legs. Infer each movement's primary group from its name. Do not create
+   a movement-by-movement observations section. If a group has insufficient data,
+   say so instead of guessing.
+4. Key workload, consistency, imbalance, plateau, and recovery risks.
+5. Practical next-week action steps, organized by those four muscle groups where relevant.
 
 `;
 
